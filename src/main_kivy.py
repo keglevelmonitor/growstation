@@ -280,10 +280,83 @@ class GrowStationApp(App):
         if self.sm:
             self.sm.current = name
 
+    def _get_sensor_id_ui(self, i):
+        """Get sensor ID from UI; prefer spinner.text (Spinner on_text may not fire)."""
+        try:
+            settings = (self.sm.ids.get("settings") if self.sm else None)
+            if settings:
+                sp = settings.ids.get(f"sensor_id_spinner_{i+1}")
+                if sp and sp.text:
+                    return str(sp.text)
+        except Exception:
+            pass
+        return (getattr(self, f"sensor_id_{i+1}", None) or "unassigned")
+
+    def _settings_ui_differs_from_saved(self):
+        """
+        Compare current UI state to saved settings. Handles Spinner on_text not firing.
+        Returns True if any Setting differs (unsaved changes).
+        """
+        if not self.settings_manager:
+            return False
+        for i in range(3):
+            sc = self.settings_manager.get_sensor_config(i)
+            saved_id = sc.get("ds18b20_id", "unassigned") or "unassigned"
+            saved_name = sc.get("display_name", f"Sensor {i+1}")
+            ui_id = self._get_sensor_id_ui(i)
+            ui_name = getattr(self, f"temp_name_{i+1}", f"Sensor {i+1}")
+            if str(ui_id) != str(saved_id) or str(ui_name) != str(saved_name):
+                return True
+        for i in range(3):
+            cfg = self.settings_manager.get_relay_config(i)
+            saved_label = cfg.get("label", f"Relay {i+1}")
+            saved_mode = cfg.get("control_mode", "Timer only")
+            if (self.relay_labels[i] != saved_label or
+                    getattr(self, f"relay_control_mode_{i}", saved_mode) != saved_mode):
+                return True
+        sys_settings = self.settings_manager.get_system_settings()
+        if (self.temp_units != sys_settings.get("temp_units", "F") or
+                self.relay_active_high != sys_settings.get("relay_active_high", False) or
+                str(self.logging_interval_min) != str(sys_settings.get("logging_interval_min", 10)) or
+                self.system_logging_enabled != sys_settings.get("system_logging_enabled", True)):
+            return True
+        return False
+
+    def _save_ui_to_settings(self):
+        """Persist current UI state to settings manager (for SAVE & CONTINUE)."""
+        if not self.settings_manager:
+            return
+        for i in range(3):
+            cfg = self.settings_manager.get_sensor_config(i)
+            cfg["ds18b20_id"] = self._get_sensor_id_ui(i) or "unassigned"
+            cfg["display_name"] = getattr(self, f"temp_name_{i+1}", f"Sensor {i+1}")
+            self.settings_manager.set_sensor_config(i, cfg)
+        for i in range(3):
+            cfg = self.settings_manager.get_relay_config(i)
+            cfg["label"] = self.relay_labels[i]
+            cfg["control_mode"] = getattr(self, f"relay_control_mode_{i}", "Timer only")
+            self.settings_manager.set_relay_config(i, cfg)
+        try:
+            lim = int(float(self.logging_interval_min or 10))
+        except (ValueError, TypeError):
+            lim = 10
+        self.settings_manager.save_system_settings({
+            "temp_units": self.temp_units,
+            "relay_active_high": self.relay_active_high,
+            "logging_interval_min": lim,
+            "system_logging_enabled": self.system_logging_enabled,
+        })
+        self.log_system_message("Settings saved.")
+
     def attempt_exit_settings(self, tab_name="none"):
-        # Show unsaved-changes dialog if dirty or has staged changes (safety)
-        if self.is_settings_dirty or self.staged_changes:
-            DirtyPopup().open()
+        # Diff-based check: Spinner on_text may not fire on some platforms
+        if self.is_settings_dirty or self.staged_changes or self._settings_ui_differs_from_saved():
+            try:
+                DirtyPopup().open()
+            except Exception as e:
+                self.log_system_message(f"Popup error: {e}")
+                import traceback
+                traceback.print_exc()
         else:
             self.go_to_screen("dashboard")
 
@@ -294,7 +367,7 @@ class GrowStationApp(App):
         self.go_to_screen("dashboard")
 
     def save_and_continue(self):
-        self._save_staged_changes()
+        self._save_ui_to_settings()
         self.staged_changes.clear()
         self.is_settings_dirty = False
         self.go_to_screen("dashboard")

@@ -525,14 +525,17 @@
                                 size_hint_x: None
                                 width: 100
                             ScaledSmallSpinner:
+                                id: sensor_id_spinner_1
                                 text: app.sensor_id_1
                                 values: app.available_sensors
                                 on_text: app.stage_setting('sensor_0_ds18b20_id', self.text); setattr(app, 'sensor_id_1', self.text)
                             ScaledSmallSpinner:
+                                id: sensor_id_spinner_2
                                 text: app.sensor_id_2
                                 values: app.available_sensors
                                 on_text: app.stage_setting('sensor_1_ds18b20_id', self.text); setattr(app, 'sensor_id_2', self.text)
                             ScaledSmallSpinner:
+                                id: sensor_id_spinner_3
                                 text: app.sensor_id_3
                                 values: app.available_sensors
                                 on_text: app.stage_setting('sensor_2_ds18b20_id', self.text); setattr(app, 'sensor_id_3', self.text)
