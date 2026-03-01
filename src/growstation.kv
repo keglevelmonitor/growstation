@@ -55,7 +55,7 @@
 
 <StandardSettingsFooter@GridLayout>:
     cols: 5
-    size_hint_y: 1
+    size_hint_y: 0.12
     spacing: 5
     ScaledButton:
         text: "EXIT"
@@ -74,7 +74,7 @@
 
 <UpdatesFooter@GridLayout>:
     cols: 5
-    size_hint_y: 1
+    size_hint_y: 0.12
     spacing: 5
     ScaledButton:
         text: "EXIT"
@@ -102,7 +102,7 @@
 
 <AboutFooter@GridLayout>:
     cols: 5
-    size_hint_y: 1
+    size_hint_y: 0.12
     spacing: 5
     ScaledButton:
         text: "EXIT"
@@ -331,33 +331,41 @@
 # --- SETTINGS SCREEN ---
 <SettingsScreen>:
     name: 'settings'
-    on_enter: app.scan_sensors(); app.update_settings_footer(root)
+    on_enter: app.scan_sensors()
     on_pre_enter: root.ids.settings_tabs.switch_to(root.ids.schedules_tab)
     BoxLayout:
         orientation: 'vertical'
         padding: [10, 5]
+        spacing: 5
         TabbedPanel:
             id: settings_tabs
             do_default_tab: False
-            tab_width: max(90, self.width / 7)
-            on_current_tab: app.update_settings_footer(root)
+            tab_width: self.width / 7
+            tab_height: Window.height * 0.085
 
             TabbedPanelItem:
                 text: 'SCHEDULES'
                 id: schedules_tab
                 BoxLayout:
                     orientation: 'vertical'
-                    Label:
-                        text: "Schedule editor (per relay, per day)\nComing in next update."
-                        halign: 'center'
-                        font_size: '18sp'
+                    padding: [0, 5, 0, 0]
+                    BoxLayout:
+                        orientation: 'vertical'
+                        padding: [5, 10]
+                        spacing: 5
+                        size_hint_y: 1
+                        Label:
+                            text: "Schedule editor (per relay, per day)\nComing in next update."
+                            halign: 'center'
+                            font_size: '18sp'
+                    StandardSettingsFooter:
 
             TabbedPanelItem:
                 text: 'RELAYS'
                 id: relays_tab
                 BoxLayout:
                     orientation: 'vertical'
-                    padding: [10, 10]
+                    padding: [0, 5, 0, 0]
                     GridLayout:
                         cols: 4
                         spacing: 10
@@ -414,11 +422,13 @@
                             on_text: app.stage_setting('relay_2_control_mode', self.text); setattr(app, 'relay_control_mode_2', self.text)
                     Widget:
                         size_hint_y: 1
+                    StandardSettingsFooter:
 
             TabbedPanelItem:
                 text: 'SENSORS'
                 BoxLayout:
                     orientation: 'vertical'
+                    padding: [0, 5, 0, 0]
                     ScrollView:
                         do_scroll_x: False
                         BoxLayout:
@@ -467,11 +477,13 @@
                                 ScaledSmallTextInput:
                                     text: app.temp_name_3
                                     on_text: app.stage_setting('sensor_2_display_name', self.text); setattr(app, 'temp_name_3', self.text)
+                    StandardSettingsFooter:
 
             TabbedPanelItem:
                 text: 'SYSTEM'
                 BoxLayout:
                     orientation: 'vertical'
+                    padding: [0, 5, 0, 0]
                     ScrollView:
                         do_scroll_x: False
                         BoxLayout:
@@ -521,6 +533,7 @@
                                 CheckBox:
                                     active: app.system_logging_enabled
                                     on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
+                    StandardSettingsFooter:
 
             TabbedPanelItem:
                 text: 'UPDATES'
@@ -542,6 +555,7 @@
                             font_size: Window.height * 0.03
                             background_color: 0.15, 0.15, 0.15, 1
                             foreground_color: 0.9, 0.9, 0.9, 1
+                    UpdatesFooter:
 
             TabbedPanelItem:
                 text: 'ABOUT'
@@ -586,11 +600,7 @@
                                 text_size: self.width, None
                                 halign: 'left'
                                 color: 0.8, 0.8, 0.8, 1
-
-        BoxLayout:
-            id: footer_container
-            size_hint_y: 0.24
-            size_hint_min_y: 50
+                    AboutFooter:
 
 # --- ROOT ---
 ScreenManager:
