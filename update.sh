@@ -39,7 +39,7 @@ echo "Updating Python environment..."
 "$VENV_PYTHON_EXEC" -m pip install -r "$PROJECT_DIR/requirements.txt"
 [ $? -ne 0 ] && { echo "[FATAL] Pip install failed."; exit 1; }
 
-ICON_SOURCE="$PROJECT_DIR/src/assets/growstation.png"
+ICON_SOURCE="$PROJECT_DIR/src/assets/evolution.png"
 if [ -f "$ICON_SOURCE" ]; then
     sudo cp "$ICON_SOURCE" "/usr/share/icons/growstation.png" 2>/dev/null || true
     sudo mkdir -p /usr/share/icons/hicolor/48x48/apps

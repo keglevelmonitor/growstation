@@ -66,4 +66,4 @@ python src/main_kivy.py
 
 ## Icon
 
-Place `growstation.png` in `src/assets/` for the app icon. Without it, the default icon is used.
+The app uses `evolution.png` in `src/assets/` for the taskbar and desktop shortcut icon.

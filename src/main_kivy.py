@@ -12,7 +12,7 @@ os.environ["SDL_VIDEO_X11_WMCLASS"] = "GrowStation"
 
 from kivy.config import Config
 current_dir = os.path.dirname(os.path.abspath(__file__))
-icon_path = os.path.join(current_dir, "assets", "growstation.png")
+icon_path = os.path.join(current_dir, "assets", "evolution.png")
 if os.path.exists(icon_path):
     Config.set("kivy", "window_icon", icon_path)
 
@@ -21,6 +21,7 @@ Config.set("graphics", "height", "417")
 Config.set("graphics", "resizable", "0")
 
 from kivy.app import App
+from kivy.factory import Factory
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.properties import StringProperty, ListProperty, BooleanProperty, ObjectProperty
@@ -311,6 +312,21 @@ class GrowStationApp(App):
         self.available_sensors = ["unassigned"] + found
         self.log_system_message(f"Sensor scan: found {len(found)} DS18B20.")
         return found
+
+    def update_settings_footer(self, settings_screen):
+        """Populate the single footer row based on current tab. Prevents duplicate footers."""
+        if not settings_screen or "footer_container" not in settings_screen.ids:
+            return
+        fc = settings_screen.ids.footer_container
+        fc.clear_widgets()
+        tp = settings_screen.ids.get("settings_tabs")
+        tab_text = tp.current_tab.text if tp and tp.current_tab else "SCHEDULES"
+        if tab_text == "UPDATES":
+            fc.add_widget(Factory.UpdatesFooter())
+        elif tab_text == "ABOUT":
+            fc.add_widget(Factory.AboutFooter())
+        else:
+            fc.add_widget(Factory.StandardSettingsFooter())
 
     def reset_defaults(self, tab_name="none"):
         # Minimal reset: just refresh from disk (no full factory reset for now)
