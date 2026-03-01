@@ -26,13 +26,20 @@ GrowStation/
 
 ## Installation (Raspberry Pi)
 
+One-liner (recommended):
+
 ```bash
-cd GrowStation
-chmod +x install.sh
-./install.sh
+bash <(curl -sL https://raw.githubusercontent.com/keglevelmonitor/growstation/main/setup.sh)
 ```
 
-Data is stored in `~/growstation-data/`.
+This clones the repo to `~/growstation/`, installs dependencies, and creates a desktop shortcut. Data is stored in `~/growstation-data/`.
+
+Or, if you already have the repo cloned:
+
+```bash
+cd growstation
+./install.sh
+```
 
 ## Installation (Windows / Development)
 
