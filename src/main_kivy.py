@@ -67,7 +67,26 @@ class LogScreen(Screen):
 
 
 class SettingsScreen(Screen):
-    pass
+    """Manages Settings tabs and matching footer (KegLevel Lite pattern)."""
+
+    def set_active_tab(self, tab_code):
+        """Switch content and footer to the given tab. tab_code: schedules, relays, sensors, system, updates, about"""
+        tab_map = {
+            "schedules": ("btn_schedules", "tab_schedules", "footer_schedules"),
+            "relays": ("btn_relays", "tab_relays", "footer_relays"),
+            "sensors": ("btn_sensors", "tab_sensors", "footer_sensors"),
+            "system": ("btn_system", "tab_system", "footer_system"),
+            "updates": ("btn_updates", "tab_updates", "footer_updates"),
+            "about": ("btn_about", "tab_about", "footer_about"),
+        }
+        if tab_code not in tab_map:
+            return
+        target_btn, target_content, target_footer = tab_map[tab_code]
+        self.ids.settings_content.current = target_content
+        self.ids.settings_footer.current = target_footer
+        for code, (btn_id, _, _) in tab_map.items():
+            if btn_id in self.ids:
+                self.ids[btn_id].state = "down" if code == tab_code else "normal"
 
 
 class DirtyPopup(Popup):

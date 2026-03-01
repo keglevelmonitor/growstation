@@ -1,5 +1,6 @@
 #:kivy 2.2.0
 #:import Window kivy.core.window.Window
+#:import NoTransition kivy.uix.screenmanager.NoTransition
 
 <Text_Small@Label>:
     font_size: Window.height * 0.03
@@ -52,6 +53,15 @@
     color: 0.7, 0.7, 0.7, 1
     font_size: Window.height * 0.03
     bold: True
+
+<TabButton@ToggleButton>:
+    group: 'settings_tabs'
+    font_size: Window.height * 0.035
+    bold: True
+    background_normal: ''
+    background_color: (0.2, 0.2, 0.2, 1) if self.state == 'normal' else (0.2, 0.8, 1, 1)
+    color: (1, 1, 1, 1) if self.state == 'normal' else (0, 0, 0, 1)
+    allow_no_selection: False
 
 <StandardSettingsFooter@GridLayout>:
     cols: 5
@@ -329,278 +339,328 @@
                 text: "HELP"
 
 # --- SETTINGS SCREEN ---
+# KegLevel Lite pattern: TabButtons + dual ScreenManager (content + footer) = single footer row, consistent layout
 <SettingsScreen>:
     name: 'settings'
     on_enter: app.scan_sensors()
-    on_pre_enter: root.ids.settings_tabs.switch_to(root.ids.schedules_tab)
+    on_pre_enter: root.set_active_tab('schedules')
     BoxLayout:
         orientation: 'vertical'
         padding: [10, 5]
         spacing: 5
-        TabbedPanel:
-            id: settings_tabs
-            do_default_tab: False
-            tab_width: self.width / 7
-            tab_height: Window.height * 0.085
 
-            TabbedPanelItem:
-                text: 'SCHEDULES'
-                id: schedules_tab
-                BoxLayout:
-                    orientation: 'vertical'
-                    padding: [0, 5, 0, 0]
+        # --- TAB HEADER ---
+        BoxLayout:
+            size_hint_y: None
+            height: Window.height * 0.08
+            padding: 5
+            spacing: 2
+            TabButton:
+                id: btn_schedules
+                text: "SCHEDULES"
+                on_release: root.set_active_tab('schedules')
+            TabButton:
+                id: btn_relays
+                text: "RELAYS"
+                on_release: root.set_active_tab('relays')
+            TabButton:
+                id: btn_sensors
+                text: "SENSORS"
+                on_release: root.set_active_tab('sensors')
+            TabButton:
+                id: btn_system
+                text: "SYSTEM"
+                on_release: root.set_active_tab('system')
+            TabButton:
+                id: btn_updates
+                text: "UPDATES"
+                on_release: root.set_active_tab('updates')
+            TabButton:
+                id: btn_about
+                text: "ABOUT"
+                on_release: root.set_active_tab('about')
+
+        # --- CONTENT AREA ---
+        ScreenManager:
+            id: settings_content
+            transition: NoTransition()
+            Screen:
+                name: 'tab_schedules'
+                ScrollView:
+                    do_scroll_x: False
                     BoxLayout:
                         orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
                         padding: [5, 10]
-                        spacing: 5
-                        size_hint_y: 1
                         Label:
                             text: "Schedule editor (per relay, per day)\nComing in next update."
                             halign: 'center'
                             font_size: '18sp'
-                    StandardSettingsFooter:
-
-            TabbedPanelItem:
-                text: 'RELAYS'
-                id: relays_tab
-                BoxLayout:
-                    orientation: 'vertical'
-                    padding: [0, 5, 0, 0]
-                    GridLayout:
-                        cols: 4
-                        spacing: 10
-                        size_hint_y: None
-                        height: self.minimum_height
-                        row_default_height: Window.height * 0.08
-                        Label:
-                            text: ""
-                            size_hint_x: None
-                            width: 100
-                        Text_Medium:
-                            text: "Relay 1"
-                            halign: 'center'
-                            text_size: self.size
-                        Text_Medium:
-                            text: "Relay 2"
-                            halign: 'center'
-                            text_size: self.size
-                        Text_Medium:
-                            text: "Relay 3"
-                            halign: 'center'
-                            text_size: self.size
-                        SettingLabel:
-                            text: "Label"
-                            size_hint_x: None
-                            width: 100
-                        ScaledSmallTextInput:
-                            text: app.relay_labels[0]
-                            on_text: app.stage_setting('relay_0_label', self.text); app.relay_labels[0] = self.text
-                        ScaledSmallTextInput:
-                            text: app.relay_labels[1]
-                            on_text: app.stage_setting('relay_1_label', self.text); app.relay_labels[1] = self.text
-                        ScaledSmallTextInput:
-                            text: app.relay_labels[2]
-                            on_text: app.stage_setting('relay_2_label', self.text); app.relay_labels[2] = self.text
-                        SettingLabel:
-                            text: "Control Mode"
-                            size_hint_x: None
-                            width: 100
-                        ScaledSmallSpinner:
-                            id: relay0_mode
-                            text: app.relay_control_mode_0
-                            values: ["Timer only", "Thermostatic only", "Both"]
-                            on_text: app.stage_setting('relay_0_control_mode', self.text); setattr(app, 'relay_control_mode_0', self.text)
-                        ScaledSmallSpinner:
-                            id: relay1_mode
-                            text: app.relay_control_mode_1
-                            values: ["Timer only", "Thermostatic only", "Both"]
-                            on_text: app.stage_setting('relay_1_control_mode', self.text); setattr(app, 'relay_control_mode_1', self.text)
-                        ScaledSmallSpinner:
-                            id: relay2_mode
-                            text: app.relay_control_mode_2
-                            values: ["Timer only", "Thermostatic only", "Both"]
-                            on_text: app.stage_setting('relay_2_control_mode', self.text); setattr(app, 'relay_control_mode_2', self.text)
-                    Widget:
-                        size_hint_y: 1
-                    StandardSettingsFooter:
-
-            TabbedPanelItem:
-                text: 'SENSORS'
-                BoxLayout:
-                    orientation: 'vertical'
-                    padding: [0, 5, 0, 0]
-                    ScrollView:
-                        do_scroll_x: False
-                        BoxLayout:
-                            orientation: 'vertical'
                             size_hint_y: None
-                            height: self.minimum_height
-                            padding: [5, 10]
-                            ScaledButton:
-                                text: "Scan Sensors"
-                                size_hint_y: None
-                                height: 40
-                                on_release: app.scan_sensors()
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Sensor 1 ID"
-                                ScaledSmallSpinner:
-                                    text: "unassigned"
-                                    values: app.available_sensors
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Sensor 1 Name"
-                                ScaledSmallTextInput:
-                                    text: app.temp_name_1
-                                    on_text: app.stage_setting('sensor_0_display_name', self.text); setattr(app, 'temp_name_1', self.text)
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Sensor 2 ID"
-                                ScaledSmallSpinner:
-                                    text: "unassigned"
-                                    values: app.available_sensors
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Sensor 2 Name"
-                                ScaledSmallTextInput:
-                                    text: app.temp_name_2
-                                    on_text: app.stage_setting('sensor_1_display_name', self.text); setattr(app, 'temp_name_2', self.text)
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Sensor 3 ID"
-                                ScaledSmallSpinner:
-                                    text: "unassigned"
-                                    values: app.available_sensors
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Sensor 3 Name"
-                                ScaledSmallTextInput:
-                                    text: app.temp_name_3
-                                    on_text: app.stage_setting('sensor_2_display_name', self.text); setattr(app, 'temp_name_3', self.text)
-                    StandardSettingsFooter:
-
-            TabbedPanelItem:
-                text: 'SYSTEM'
-                BoxLayout:
-                    orientation: 'vertical'
-                    padding: [0, 5, 0, 0]
-                    ScrollView:
-                        do_scroll_x: False
-                        BoxLayout:
-                            orientation: 'vertical'
-                            size_hint_y: None
-                            height: self.minimum_height
-                            padding: [5, 10]
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Temperature Units"
-                                BoxLayout:
-                                    spacing: 10
-                                    ToggleButton:
-                                        text: "Fahrenheit"
-                                        group: "units"
-                                        state: 'down' if app.temp_units == 'F' else 'normal'
-                                        on_release: app.stage_setting('temp_units', 'F'); app.temp_units = 'F'
-                                    ToggleButton:
-                                        text: "Celsius"
-                                        group: "units"
-                                        state: 'down' if app.temp_units == 'C' else 'normal'
-                                        on_release: app.stage_setting('temp_units', 'C'); app.temp_units = 'C'
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Relay Logic"
-                                BoxLayout:
-                                    spacing: 10
-                                    ToggleButton:
-                                        text: "Active HIGH"
-                                        group: "relay_logic"
-                                        state: 'down' if app.relay_active_high else 'normal'
-                                        on_release: app.stage_setting('relay_active_high', True); app.relay_active_high = True
-                                    ToggleButton:
-                                        text: "Active LOW"
-                                        group: "relay_logic"
-                                        state: 'down' if not app.relay_active_high else 'normal'
-                                        on_release: app.stage_setting('relay_active_high', False); app.relay_active_high = False
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Log Interval (min)"
-                                ScaledSmallTextInput:
-                                    text: app.logging_interval_min
-                                    on_text: app.stage_setting('logging_interval_min', self.text); app.logging_interval_min = self.text
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Detailed Log"
-                                CheckBox:
-                                    active: app.system_logging_enabled
-                                    on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
-                    StandardSettingsFooter:
-
-            TabbedPanelItem:
-                text: 'UPDATES'
-                BoxLayout:
-                    orientation: 'vertical'
-                    padding: [0, 5, 0, 0]
+                            height: 80
+            Screen:
+                name: 'tab_relays'
+                ScrollView:
+                    do_scroll_x: False
                     BoxLayout:
                         orientation: 'vertical'
-                        padding: 10
-                        size_hint_y: 1
-                        Text_Medium:
-                            text: "Software Update Log"
-                            size_hint_y: None
-                            height: Window.height * 0.07
-                            color: 0.7, 0.7, 0.7, 1
-                        TextInput:
-                            text: app.update_log_text
-                            readonly: True
-                            font_size: Window.height * 0.03
-                            background_color: 0.15, 0.15, 0.15, 1
-                            foreground_color: 0.9, 0.9, 0.9, 1
-                    UpdatesFooter:
-
-            TabbedPanelItem:
-                text: 'ABOUT'
-                BoxLayout:
-                    orientation: 'vertical'
-                    padding: [0, 5, 0, 0]
-                    ScrollView:
-                        do_scroll_x: False
-                        size_hint_x: 1
-                        BoxLayout:
-                            orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [5, 10]
+                        GridLayout:
+                            cols: 4
+                            spacing: 10
                             size_hint_y: None
                             height: self.minimum_height
-                            padding: [10, 10]
-                            spacing: 10
-                            Text_Large:
-                                text: "GrowStation"
-                                color: 1, 0.6, 0, 1
-                                size_hint_y: None
-                                height: Window.height * 0.05
+                            row_default_height: Window.height * 0.08
+                            Label:
+                                text: ""
+                                size_hint_x: None
+                                width: 100
                             Text_Medium:
-                                text: "Grow station relay and temperature control. Controls 3 relays (lights, fans, heaters) with schedules and up to 3 DS18B20 temperature sensors."
-                                bold: False
-                                size_hint_y: None
-                                height: self.texture_size[1]
-                                text_size: self.width, None
-                                halign: 'left'
-                                color: 0.8, 0.8, 0.8, 1
-                            Widget:
-                                size_hint_y: None
-                                height: 20
-                            Text_Large:
-                                text: "KegLevel Brands"
-                                color: 1, 0.6, 0, 1
-                                size_hint_y: None
-                                height: Window.height * 0.05
+                                text: "Relay 1"
+                                halign: 'center'
+                                text_size: self.size
                             Text_Medium:
-                                text: "GrowStation(c) and other KegLevel names and program code are copyrighted. This material is protected by copyright law."
-                                bold: False
-                                size_hint_y: None
-                                height: self.texture_size[1]
-                                text_size: self.width, None
-                                halign: 'left'
-                                color: 0.8, 0.8, 0.8, 1
+                                text: "Relay 2"
+                                halign: 'center'
+                                text_size: self.size
+                            Text_Medium:
+                                text: "Relay 3"
+                                halign: 'center'
+                                text_size: self.size
+                            SettingLabel:
+                                text: "Label"
+                                size_hint_x: None
+                                width: 100
+                            ScaledSmallTextInput:
+                                text: app.relay_labels[0]
+                                on_text: app.stage_setting('relay_0_label', self.text); app.relay_labels[0] = self.text
+                            ScaledSmallTextInput:
+                                text: app.relay_labels[1]
+                                on_text: app.stage_setting('relay_1_label', self.text); app.relay_labels[1] = self.text
+                            ScaledSmallTextInput:
+                                text: app.relay_labels[2]
+                                on_text: app.stage_setting('relay_2_label', self.text); app.relay_labels[2] = self.text
+                            SettingLabel:
+                                text: "Control Mode"
+                                size_hint_x: None
+                                width: 100
+                            ScaledSmallSpinner:
+                                id: relay0_mode
+                                text: app.relay_control_mode_0
+                                values: ["Timer only", "Thermostatic only", "Both"]
+                                on_text: app.stage_setting('relay_0_control_mode', self.text); setattr(app, 'relay_control_mode_0', self.text)
+                            ScaledSmallSpinner:
+                                id: relay1_mode
+                                text: app.relay_control_mode_1
+                                values: ["Timer only", "Thermostatic only", "Both"]
+                                on_text: app.stage_setting('relay_1_control_mode', self.text); setattr(app, 'relay_control_mode_1', self.text)
+                            ScaledSmallSpinner:
+                                id: relay2_mode
+                                text: app.relay_control_mode_2
+                                values: ["Timer only", "Thermostatic only", "Both"]
+                                on_text: app.stage_setting('relay_2_control_mode', self.text); setattr(app, 'relay_control_mode_2', self.text)
+            Screen:
+                name: 'tab_sensors'
+                ScrollView:
+                    do_scroll_x: False
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [5, 10]
+                        ScaledButton:
+                            text: "Scan Sensors"
+                            size_hint_y: None
+                            height: 40
+                            on_release: app.scan_sensors()
+                        SettingRow:
+                            SettingLabel:
+                                text: "Sensor 1 ID"
+                            ScaledSmallSpinner:
+                                text: "unassigned"
+                                values: app.available_sensors
+                        SettingRow:
+                            SettingLabel:
+                                text: "Sensor 1 Name"
+                            ScaledSmallTextInput:
+                                text: app.temp_name_1
+                                on_text: app.stage_setting('sensor_0_display_name', self.text); setattr(app, 'temp_name_1', self.text)
+                        SettingRow:
+                            SettingLabel:
+                                text: "Sensor 2 ID"
+                            ScaledSmallSpinner:
+                                text: "unassigned"
+                                values: app.available_sensors
+                        SettingRow:
+                            SettingLabel:
+                                text: "Sensor 2 Name"
+                            ScaledSmallTextInput:
+                                text: app.temp_name_2
+                                on_text: app.stage_setting('sensor_1_display_name', self.text); setattr(app, 'temp_name_2', self.text)
+                        SettingRow:
+                            SettingLabel:
+                                text: "Sensor 3 ID"
+                            ScaledSmallSpinner:
+                                text: "unassigned"
+                                values: app.available_sensors
+                        SettingRow:
+                            SettingLabel:
+                                text: "Sensor 3 Name"
+                            ScaledSmallTextInput:
+                                text: app.temp_name_3
+                                on_text: app.stage_setting('sensor_2_display_name', self.text); setattr(app, 'temp_name_3', self.text)
+            Screen:
+                name: 'tab_system'
+                ScrollView:
+                    do_scroll_x: False
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [5, 10]
+                        SettingRow:
+                            SettingLabel:
+                                text: "Temperature Units"
+                            BoxLayout:
+                                spacing: 10
+                                ToggleButton:
+                                    text: "Fahrenheit"
+                                    group: "units"
+                                    state: 'down' if app.temp_units == 'F' else 'normal'
+                                    on_release: app.stage_setting('temp_units', 'F'); app.temp_units = 'F'
+                                ToggleButton:
+                                    text: "Celsius"
+                                    group: "units"
+                                    state: 'down' if app.temp_units == 'C' else 'normal'
+                                    on_release: app.stage_setting('temp_units', 'C'); app.temp_units = 'C'
+                        SettingRow:
+                            SettingLabel:
+                                text: "Relay Logic"
+                            BoxLayout:
+                                spacing: 10
+                                ToggleButton:
+                                    text: "Active HIGH"
+                                    group: "relay_logic"
+                                    state: 'down' if app.relay_active_high else 'normal'
+                                    on_release: app.stage_setting('relay_active_high', True); app.relay_active_high = True
+                                ToggleButton:
+                                    text: "Active LOW"
+                                    group: "relay_logic"
+                                    state: 'down' if not app.relay_active_high else 'normal'
+                                    on_release: app.stage_setting('relay_active_high', False); app.relay_active_high = False
+                        SettingRow:
+                            SettingLabel:
+                                text: "Log Interval (min)"
+                            ScaledSmallTextInput:
+                                text: app.logging_interval_min
+                                on_text: app.stage_setting('logging_interval_min', self.text); app.logging_interval_min = self.text
+                        SettingRow:
+                            SettingLabel:
+                                text: "Detailed Log"
+                            CheckBox:
+                                active: app.system_logging_enabled
+                                on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
+            Screen:
+                name: 'tab_updates'
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: [5, 10]
+                    Text_Medium:
+                        text: "Software Update Log"
+                        size_hint_y: None
+                        height: Window.height * 0.07
+                        color: 0.7, 0.7, 0.7, 1
+                    TextInput:
+                        text: app.update_log_text
+                        readonly: True
+                        font_size: Window.height * 0.03
+                        background_color: 0.15, 0.15, 0.15, 1
+                        foreground_color: 0.9, 0.9, 0.9, 1
+            Screen:
+                name: 'tab_about'
+                ScrollView:
+                    do_scroll_x: False
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: self.minimum_height
+                        padding: [10, 10]
+                        spacing: 10
+                        Text_Large:
+                            text: "GrowStation"
+                            color: 1, 0.6, 0, 1
+                            size_hint_y: None
+                            height: Window.height * 0.05
+                        Text_Medium:
+                            text: "Grow station relay and temperature control. Controls 3 relays (lights, fans, heaters) with schedules and up to 3 DS18B20 temperature sensors."
+                            bold: False
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                            text_size: self.width, None
+                            halign: 'left'
+                            color: 0.8, 0.8, 0.8, 1
+                        Widget:
+                            size_hint_y: None
+                            height: 20
+                        Text_Large:
+                            text: "KegLevel Brands"
+                            color: 1, 0.6, 0, 1
+                            size_hint_y: None
+                            height: Window.height * 0.05
+                        Text_Medium:
+                            text: "GrowStation(c) and other KegLevel names and program code are copyrighted. This material is protected by copyright law."
+                            bold: False
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                            text_size: self.width, None
+                            halign: 'left'
+                            color: 0.8, 0.8, 0.8, 1
+
+        # --- FOOTER (single row, switches per tab) ---
+        ScreenManager:
+            id: settings_footer
+            size_hint_y: None
+            height: Window.height * 0.12
+            transition: NoTransition()
+            Screen:
+                name: 'footer_schedules'
+                BoxLayout:
+                    padding: 5
+                    StandardSettingsFooter:
+                        size_hint_y: 1
+            Screen:
+                name: 'footer_relays'
+                BoxLayout:
+                    padding: 5
+                    StandardSettingsFooter:
+                        size_hint_y: 1
+            Screen:
+                name: 'footer_sensors'
+                BoxLayout:
+                    padding: 5
+                    StandardSettingsFooter:
+                        size_hint_y: 1
+            Screen:
+                name: 'footer_system'
+                BoxLayout:
+                    padding: 5
+                    StandardSettingsFooter:
+                        size_hint_y: 1
+            Screen:
+                name: 'footer_updates'
+                BoxLayout:
+                    padding: 5
+                    UpdatesFooter:
+                        size_hint_y: 1
+            Screen:
+                name: 'footer_about'
+                BoxLayout:
+                    padding: 5
                     AboutFooter:
+                        size_hint_y: 1
 
 # --- ROOT ---
 ScreenManager:
