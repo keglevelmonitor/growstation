@@ -297,30 +297,33 @@ class GrowStationApp(App):
         Compare current UI state to saved settings. Handles Spinner on_text not firing.
         Returns True if any Setting differs (unsaved changes).
         """
-        if not self.settings_manager:
+        try:
+            if not self.settings_manager:
+                return False
+            for i in range(3):
+                sc = self.settings_manager.get_sensor_config(i)
+                saved_id = sc.get("ds18b20_id", "unassigned") or "unassigned"
+                saved_name = sc.get("display_name", f"Sensor {i+1}")
+                ui_id = self._get_sensor_id_ui(i)
+                ui_name = getattr(self, f"temp_name_{i+1}", f"Sensor {i+1}")
+                if str(ui_id) != str(saved_id) or str(ui_name) != str(saved_name):
+                    return True
+            for i in range(3):
+                cfg = self.settings_manager.get_relay_config(i)
+                saved_label = cfg.get("label", f"Relay {i+1}")
+                saved_mode = cfg.get("control_mode", "Timer only")
+                if (self.relay_labels[i] != saved_label or
+                        getattr(self, f"relay_control_mode_{i}", saved_mode) != saved_mode):
+                    return True
+            sys_settings = self.settings_manager.get_system_settings()
+            if (self.temp_units != sys_settings.get("temp_units", "F") or
+                    self.relay_active_high != sys_settings.get("relay_active_high", False) or
+                    str(self.logging_interval_min) != str(sys_settings.get("logging_interval_min", 10)) or
+                    self.system_logging_enabled != sys_settings.get("system_logging_enabled", True)):
+                return True
             return False
-        for i in range(3):
-            sc = self.settings_manager.get_sensor_config(i)
-            saved_id = sc.get("ds18b20_id", "unassigned") or "unassigned"
-            saved_name = sc.get("display_name", f"Sensor {i+1}")
-            ui_id = self._get_sensor_id_ui(i)
-            ui_name = getattr(self, f"temp_name_{i+1}", f"Sensor {i+1}")
-            if str(ui_id) != str(saved_id) or str(ui_name) != str(saved_name):
-                return True
-        for i in range(3):
-            cfg = self.settings_manager.get_relay_config(i)
-            saved_label = cfg.get("label", f"Relay {i+1}")
-            saved_mode = cfg.get("control_mode", "Timer only")
-            if (self.relay_labels[i] != saved_label or
-                    getattr(self, f"relay_control_mode_{i}", saved_mode) != saved_mode):
-                return True
-        sys_settings = self.settings_manager.get_system_settings()
-        if (self.temp_units != sys_settings.get("temp_units", "F") or
-                self.relay_active_high != sys_settings.get("relay_active_high", False) or
-                str(self.logging_interval_min) != str(sys_settings.get("logging_interval_min", 10)) or
-                self.system_logging_enabled != sys_settings.get("system_logging_enabled", True)):
-            return True
-        return False
+        except Exception:
+            return True  # fail-safe: show popup if diff check errors
 
     def _save_ui_to_settings(self):
         """Persist current UI state to settings manager (for SAVE & CONTINUE)."""
@@ -348,15 +351,20 @@ class GrowStationApp(App):
         })
         self.log_system_message("Settings saved.")
 
+    def _open_dirty_popup(self, dt):
+        """Deferred popup open; avoids touch/event conflicts when called from button release."""
+        try:
+            DirtyPopup().open()
+        except Exception as e:
+            self.log_system_message(f"Popup error: {e}")
+            import traceback
+            traceback.print_exc()
+
     def attempt_exit_settings(self, tab_name="none"):
         # Diff-based check: Spinner on_text may not fire on some platforms
         if self.is_settings_dirty or self.staged_changes or self._settings_ui_differs_from_saved():
-            try:
-                DirtyPopup().open()
-            except Exception as e:
-                self.log_system_message(f"Popup error: {e}")
-                import traceback
-                traceback.print_exc()
+            # Defer popup to next frame; avoids crash when opening from button on_release
+            Clock.schedule_once(self._open_dirty_popup, 0)
         else:
             self.go_to_screen("dashboard")
 
