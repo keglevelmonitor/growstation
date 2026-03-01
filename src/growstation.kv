@@ -135,23 +135,27 @@
         padding: 10
         spacing: 10
         Text_Medium:
-            text: "You have unsaved changes.\nSave before exiting?"
+            text: "You have unsaved changes.\nDo you want to save them before exiting?"
             halign: 'center'
         BoxLayout:
             spacing: 10
             size_hint_y: None
             height: 50
             ScaledButton:
-                text: "DISCARD"
+                text: "DISCARD & CONTINUE"
                 background_color: 0.8, 0.2, 0.2, 1
-                on_release: app.discard_changes(); root.dismiss()
+                on_release:
+                    app.discard_changes()
+                    root.dismiss()
             ScaledButton:
                 text: "CANCEL"
                 on_release: root.dismiss()
             ScaledButton:
-                text: "SAVE"
+                text: "SAVE & CONTINUE"
                 background_color: 0.2, 0.8, 0.2, 1
-                on_release: app.save_and_continue(); root.dismiss()
+                on_release:
+                    app.save_and_continue()
+                    root.dismiss()
 
 # --- DASHBOARD ---
 <DashboardScreen>:

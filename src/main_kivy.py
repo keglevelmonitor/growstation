@@ -281,7 +281,8 @@ class GrowStationApp(App):
             self.sm.current = name
 
     def attempt_exit_settings(self, tab_name="none"):
-        if self.is_settings_dirty:
+        # Show unsaved-changes dialog if dirty or has staged changes (safety)
+        if self.is_settings_dirty or self.staged_changes:
             DirtyPopup().open()
         else:
             self.go_to_screen("dashboard")
