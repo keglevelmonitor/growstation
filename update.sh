@@ -15,6 +15,9 @@ if [ ! -d "$PROJECT_DIR/.git" ]; then
     exit 1
 fi
 
+# Ignore execute-bit changes (chmod +x) so git pull does not fail on install.sh/update.sh
+git config --local core.fileMode false
+
 echo "Fetching latest..."
 git fetch origin "$BRANCH" 2>/dev/null || git fetch
 
@@ -29,8 +32,15 @@ else
 fi
 
 echo "Pulling changes..."
-git pull origin "$BRANCH"
-[ $? -ne 0 ] && { echo "[ERROR] git pull failed."; exit 1; }
+if ! git pull origin "$BRANCH"; then
+    echo "Resetting install.sh and update.sh (chmod changes) and retrying..."
+    git checkout -- install.sh update.sh 2>/dev/null
+    if ! git pull origin "$BRANCH"; then
+        echo "[ERROR] git pull failed."
+        exit 1
+    fi
+fi
+chmod +x "$PROJECT_DIR/install.sh" "$PROJECT_DIR/update.sh" 2>/dev/null || true
 
 echo "Checking system dependencies..."
 sudo apt-get install -y python3-dev python3-venv liblgpio-dev numlockx libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev 2>/dev/null || true
