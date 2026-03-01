@@ -64,10 +64,11 @@ def _thermo_demand(sensor_id, action, setpoint_f, temp_f):
     return False
 
 
-def compute_relay_states(settings_manager, temp_reader_func=None):
+def compute_relay_states(settings_manager, temp_reader_func=None, temps_cache=None):
     """
     Returns [bool, bool, bool] for each relay ON/OFF.
     temp_reader_func: optional (sensor_id) -> temp_f, else uses read_temp_f.
+    temps_cache: optional dict {sensor_idx: temp_f} — when provided, used instead of reading.
     """
     if temp_reader_func is None:
         temp_reader_func = read_temp_f
@@ -86,7 +87,10 @@ def compute_relay_states(settings_manager, temp_reader_func=None):
     for i, sc in enumerate(sensor_configs):
         sid = sc.get("ds18b20_id", "unassigned")
         if sid and sid != "unassigned":
-            temps[i] = temp_reader_func(sid)
+            if temps_cache is not None and i in temps_cache:
+                temps[i] = temps_cache[i]
+            else:
+                temps[i] = temp_reader_func(sid)
         else:
             temps[i] = None
 

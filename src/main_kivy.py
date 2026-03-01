@@ -125,6 +125,9 @@ class GrowStationApp(App):
     relay_control = ObjectProperty(None)
     _tick_interval = None
     _last_log_time = 0.0
+    _last_temp_read_time = 0.0
+    _cached_temps = {}
+    TEMP_READ_INTERVAL = 5.0  # seconds — DS18B20 reads are slow; avoid blocking UI
 
     def dismiss_splash(self, dt=None):
         if hasattr(self, "splash_queue") and self.splash_queue:
@@ -149,18 +152,32 @@ class GrowStationApp(App):
             except Exception as e:
                 print(f"Log write error: {e}")
 
+    def _read_all_temps(self):
+        """Read all assigned sensors once. Returns {sensor_idx: temp_f}."""
+        if not self.settings_manager:
+            return {}
+        temps = {}
+        for i in range(3):
+            sc = self.settings_manager.get_sensor_config(i)
+            sid = sc.get("ds18b20_id", "unassigned")
+            if sid and sid != "unassigned":
+                temps[i] = read_temp_f(sid)
+            else:
+                temps[i] = None
+        return temps
+
     def _write_temp_snapshot(self):
         if not self.settings_manager or not self.system_logging_enabled:
             return
         try:
-            temps = []
+            temps = self._cached_temps if self._cached_temps else self._read_all_temps()
+            parts = []
             for i in range(3):
                 sc = self.settings_manager.get_sensor_config(i)
-                sid = sc.get("ds18b20_id", "unassigned")
-                t = read_temp_f(sid) if sid and sid != "unassigned" else None
                 name = sc.get("display_name", f"Sensor {i+1}")
-                temps.append(f"{name}={t:.1f}" if t is not None else f"{name}=--.-")
-            msg = "Temp snapshot: " + ", ".join(temps)
+                t = temps.get(i)
+                parts.append(f"{name}={t:.1f}" if t is not None else f"{name}=--.-")
+            msg = "Temp snapshot: " + ", ".join(parts)
             self.log_system_message(msg)
         except Exception as e:
             print(f"Temp snapshot error: {e}")
@@ -187,6 +204,8 @@ class GrowStationApp(App):
             self.relay_control = RelayControl(self.settings_manager)
             self.relay_control.set_logger(self.log_system_message)
             self._refresh_ui_from_settings()
+            self._cached_temps = self._read_all_temps()
+            self._last_temp_read_time = time.time()
             self._tick_interval = Clock.schedule_interval(self._tick, 1.0)
             self.log_system_message("Backend initialized.")
         except Exception as e:
@@ -197,13 +216,17 @@ class GrowStationApp(App):
     def _tick(self, dt):
         if not self.settings_manager or not self.relay_control:
             return
-        desired = compute_relay_states(self.settings_manager)
+        now = time.time()
+        # Read temps only every TEMP_READ_INTERVAL seconds (DS18B20 I/O blocks main thread)
+        if now - self._last_temp_read_time >= self.TEMP_READ_INTERVAL:
+            self._cached_temps = self._read_all_temps()
+            self._last_temp_read_time = now
+        desired = compute_relay_states(self.settings_manager, temps_cache=self._cached_temps)
         self.relay_control.set_relay_states(desired)
         for i in range(3):
             self.relay_states[i] = self.relay_control.is_relay_on(i)
         self._update_temps()
         self._update_relay_labels_and_modes()
-        now = time.time()
         interval_min = float(self.logging_interval_min or 10)
         if self.system_logging_enabled and interval_min > 0 and (now - self._last_log_time) >= interval_min * 60:
             self._last_log_time = now
@@ -212,8 +235,7 @@ class GrowStationApp(App):
     def _update_temps(self):
         for i in range(3):
             sc = self.settings_manager.get_sensor_config(i)
-            sid = sc.get("ds18b20_id", "unassigned")
-            t = read_temp_f(sid) if sid and sid != "unassigned" else None
+            t = self._cached_temps.get(i) if self._cached_temps else None
             if t is not None:
                 if self.temp_units == "C":
                     t = (t - 32) * 5 / 9
