@@ -521,7 +521,6 @@
                                 CheckBox:
                                     active: app.system_logging_enabled
                                     on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
-                    StandardSettingsFooter:
 
             TabbedPanelItem:
                 text: 'UPDATES'
@@ -543,7 +542,6 @@
                             font_size: Window.height * 0.03
                             background_color: 0.15, 0.15, 0.15, 1
                             foreground_color: 0.9, 0.9, 0.9, 1
-                    UpdatesFooter:
 
             TabbedPanelItem:
                 text: 'ABOUT'
