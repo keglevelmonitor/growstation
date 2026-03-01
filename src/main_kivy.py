@@ -1,6 +1,7 @@
 # GrowStation app — main_kivy.py
 import os
 import sys
+import subprocess
 import threading
 import signal
 import time
@@ -84,6 +85,9 @@ class GrowStationApp(App):
     relay_labels = ListProperty(["Relay 1", "Relay 2", "Relay 3"])
     relay_states = ListProperty([False, False, False])
     relay_modes = ListProperty(["Timer", "Timer", "Timer"])
+    relay_control_mode_0 = StringProperty("Timer only")
+    relay_control_mode_1 = StringProperty("Timer only")
+    relay_control_mode_2 = StringProperty("Timer only")
     temp_1 = StringProperty("--.-")
     temp_2 = StringProperty("--.-")
     temp_3 = StringProperty("--.-")
@@ -92,6 +96,9 @@ class GrowStationApp(App):
     temp_name_3 = StringProperty("Sensor 3")
     relay_active_high = BooleanProperty(False)
     logging_interval_min = StringProperty("10")
+    update_log_text = StringProperty("Click CHECK to check for app updates.\n")
+    is_update_available = BooleanProperty(False)
+    is_install_successful = BooleanProperty(False)
     settings_manager = ObjectProperty(None)
     relay_control = ObjectProperty(None)
     _tick_interval = None
@@ -218,6 +225,7 @@ class GrowStationApp(App):
             self.relay_labels[i] = cfg.get("label", f"Relay {i+1}")
             m = cfg.get("control_mode", "Timer only")
             self.relay_modes[i] = "Timer" if m == "Timer only" else ("Thermo" if m == "Thermostatic only" else "Both")
+            setattr(self, f"relay_control_mode_{i}", m)
         for i in range(3):
             sc = self.settings_manager.get_sensor_config(i)
             setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
@@ -310,6 +318,84 @@ class GrowStationApp(App):
         self.staged_changes.clear()
         self.is_settings_dirty = False
         self.log_system_message("Defaults refreshed.")
+
+    def check_for_updates(self):
+        self.update_log_text = "Checking for updates...\n"
+        self.is_update_available = False
+        self.is_install_successful = False
+
+        def _check():
+            try:
+                src_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(src_dir)
+                subprocess.check_output(["git", "fetch"], cwd=project_root, stderr=subprocess.STDOUT)
+                status = subprocess.check_output(["git", "status", "-uno"], cwd=project_root, text=True)
+
+                def update_ui(dt):
+                    if "behind" in status:
+                        self.update_log_text += "\n[UPDATE AVAILABLE]\nA new version is available on GitHub.\nClick INSTALL to proceed."
+                        self.is_update_available = True
+                    elif "up to date" in status:
+                        self.update_log_text += "\n[SYSTEM IS CURRENT]\nYou are running the latest version."
+                    else:
+                        self.update_log_text += f"\n[STATUS UNKNOWN]\nGit status returned:\n{status}"
+                Clock.schedule_once(update_ui, 0)
+            except Exception as e:
+                err_msg = str(e)
+                def report_err(dt):
+                    self.update_log_text += f"\n[ERROR] Check failed:\n{err_msg}"
+                Clock.schedule_once(report_err, 0)
+
+        threading.Thread(target=_check, daemon=True).start()
+
+    def run_update_script(self):
+        self.update_log_text += "\n\n[STARTING INSTALLATION]...\n"
+        self.is_update_available = False
+
+        def _install():
+            script_url = "https://github.com/keglevelmonitor/growstation/raw/main/update.sh"
+            try:
+                src_dir = os.path.dirname(os.path.abspath(__file__))
+                project_root = os.path.dirname(src_dir)
+                local_script_path = os.path.join(project_root, "update.sh")
+                Clock.schedule_once(lambda dt: self._append_update_log(f"Downloading update script...\n"), 0)
+                subprocess.run(["curl", "-L", "-o", local_script_path, script_url], check=True)
+                subprocess.run(["chmod", "+x", local_script_path], check=True)
+                Clock.schedule_once(lambda dt: self._append_update_log("Executing update.sh...\n"), 0)
+                process = subprocess.Popen(
+                    ["./update.sh"],
+                    cwd=project_root,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                )
+                for line in process.stdout:
+                    Clock.schedule_once(lambda dt, l=line: self._append_update_log(l), 0)
+                process.wait()
+                if process.returncode == 0:
+                    Clock.schedule_once(lambda dt: self._append_update_log("\n[SUCCESS] Update finished.\nClick RESTART APP to apply changes."), 0)
+                    self.is_install_successful = True
+                else:
+                    Clock.schedule_once(lambda dt: self._append_update_log(f"\n[FAILURE] Script exited with code {process.returncode}"), 0)
+            except Exception as e:
+                Clock.schedule_once(lambda dt: self._append_update_log(f"\n[CRITICAL ERROR] {str(e)}"), 0)
+
+        threading.Thread(target=_install, daemon=True).start()
+
+    def _append_update_log(self, text):
+        self.update_log_text += text
+
+    def restart_application(self):
+        self.log_system_message("RESTARTING APPLICATION...")
+        try:
+            if hasattr(self, "relay_control") and self.relay_control:
+                self.relay_control.cleanup_gpio()
+        except Exception as e:
+            print(f"[System] Restart cleanup warning: {e}")
+        python = sys.executable
+        script = os.path.abspath(sys.argv[0])
+        args = sys.argv[1:]
+        os.execv(python, [python, script] + args)
 
 
 def main():

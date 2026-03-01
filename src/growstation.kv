@@ -55,7 +55,7 @@
 
 <StandardSettingsFooter@GridLayout>:
     cols: 5
-    size_hint_y: 0.12
+    size_hint_y: 0.24
     spacing: 5
     ScaledButton:
         text: "EXIT"
@@ -71,6 +71,50 @@
         text: "SAVE"
         background_color: 0.2, 0.8, 0.2, 1
         on_release: app.save_current_tab()
+
+<UpdatesFooter@GridLayout>:
+    cols: 5
+    size_hint_y: 0.24
+    spacing: 5
+    ScaledButton:
+        text: "EXIT"
+        on_release: app.attempt_exit_settings()
+    ScaledButton:
+        text: "HELP"
+    ScaledButton:
+        text: "CHECK"
+        background_color: 0.2, 0.6, 0.8, 1
+        on_release: app.check_for_updates()
+    ScaledButton:
+        text: "INSTALL"
+        disabled: not app.is_update_available
+        background_disabled_normal: ''
+        background_disabled_down: ''
+        background_color: (0.2, 0.8, 0.2, 1) if app.is_update_available else (0.3, 0.3, 0.3, 1)
+        on_release: app.run_update_script()
+    ScaledButton:
+        text: "RESTART APP"
+        disabled: not app.is_install_successful
+        background_disabled_normal: ''
+        background_disabled_down: ''
+        background_color: (1, 0.6, 0, 1) if app.is_install_successful else (0.3, 0.3, 0.3, 1)
+        on_release: app.restart_application()
+
+<AboutFooter@GridLayout>:
+    cols: 5
+    size_hint_y: 0.24
+    spacing: 5
+    ScaledButton:
+        text: "EXIT"
+        on_release: app.attempt_exit_settings()
+    ScaledButton:
+        text: "HELP"
+    Label:
+        text: ""
+    Label:
+        text: ""
+    Label:
+        text: ""
 
 <DirtyPopup@Popup>:
     title: 'Unsaved Changes'
@@ -288,86 +332,88 @@
 <SettingsScreen>:
     name: 'settings'
     on_enter: app.scan_sensors()
+    on_pre_enter: root.ids.settings_tabs.switch_to(root.ids.schedules_tab)
     BoxLayout:
         orientation: 'vertical'
         padding: [10, 5]
         TabbedPanel:
+            id: settings_tabs
             do_default_tab: False
-            tab_width: max(120, self.width / 5)
-
-            TabbedPanelItem:
-                text: 'RELAYS'
-                id: relays_tab
-                BoxLayout:
-                    orientation: 'vertical'
-                    ScrollView:
-                        do_scroll_x: False
-                        BoxLayout:
-                            orientation: 'vertical'
-                            size_hint_y: None
-                            height: self.minimum_height
-                            padding: [5, 10]
-                            Label:
-                                text: "Relay 1"
-                                size_hint_y: None
-                                height: 30
-                                bold: True
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Label"
-                                ScaledSmallTextInput:
-                                    text: app.relay_labels[0]
-                                    on_text: app.stage_setting('relay_0_label', self.text); app.relay_labels[0] = self.text
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Control Mode"
-                                ScaledSmallSpinner:
-                                    text: "Timer only"
-                                    values: ["Timer only", "Thermostatic only", "Both"]
-                            Label:
-                                text: "Relay 2"
-                                size_hint_y: None
-                                height: 30
-                                bold: True
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Label"
-                                ScaledSmallTextInput:
-                                    text: app.relay_labels[1]
-                                    on_text: app.stage_setting('relay_1_label', self.text); app.relay_labels[1] = self.text
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Control Mode"
-                                ScaledSmallSpinner:
-                                    text: "Timer only"
-                                    values: ["Timer only", "Thermostatic only", "Both"]
-                            Label:
-                                text: "Relay 3"
-                                size_hint_y: None
-                                height: 30
-                                bold: True
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Label"
-                                ScaledSmallTextInput:
-                                    text: app.relay_labels[2]
-                                    on_text: app.stage_setting('relay_2_label', self.text); app.relay_labels[2] = self.text
-                            SettingRow:
-                                SettingLabel:
-                                    text: "Control Mode"
-                                ScaledSmallSpinner:
-                                    text: "Timer only"
-                                    values: ["Timer only", "Thermostatic only", "Both"]
-                    StandardSettingsFooter:
+            tab_width: max(90, self.width / 7)
 
             TabbedPanelItem:
                 text: 'SCHEDULES'
+                id: schedules_tab
                 BoxLayout:
                     orientation: 'vertical'
                     Label:
                         text: "Schedule editor (per relay, per day)\nComing in next update."
                         halign: 'center'
                         font_size: '18sp'
+                    StandardSettingsFooter:
+
+            TabbedPanelItem:
+                text: 'RELAYS'
+                id: relays_tab
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: [10, 10]
+                    GridLayout:
+                        cols: 4
+                        spacing: 10
+                        size_hint_y: None
+                        height: self.minimum_height
+                        row_default_height: Window.height * 0.08
+                        Label:
+                            text: ""
+                            size_hint_x: None
+                            width: 100
+                        Text_Medium:
+                            text: "Relay 1"
+                            halign: 'center'
+                            text_size: self.size
+                        Text_Medium:
+                            text: "Relay 2"
+                            halign: 'center'
+                            text_size: self.size
+                        Text_Medium:
+                            text: "Relay 3"
+                            halign: 'center'
+                            text_size: self.size
+                        SettingLabel:
+                            text: "Label"
+                            size_hint_x: None
+                            width: 100
+                        ScaledSmallTextInput:
+                            text: app.relay_labels[0]
+                            on_text: app.stage_setting('relay_0_label', self.text); app.relay_labels[0] = self.text
+                        ScaledSmallTextInput:
+                            text: app.relay_labels[1]
+                            on_text: app.stage_setting('relay_1_label', self.text); app.relay_labels[1] = self.text
+                        ScaledSmallTextInput:
+                            text: app.relay_labels[2]
+                            on_text: app.stage_setting('relay_2_label', self.text); app.relay_labels[2] = self.text
+                        SettingLabel:
+                            text: "Control Mode"
+                            size_hint_x: None
+                            width: 100
+                        ScaledSmallSpinner:
+                            id: relay0_mode
+                            text: app.relay_control_mode_0
+                            values: ["Timer only", "Thermostatic only", "Both"]
+                            on_text: app.stage_setting('relay_0_control_mode', self.text); setattr(app, 'relay_control_mode_0', self.text)
+                        ScaledSmallSpinner:
+                            id: relay1_mode
+                            text: app.relay_control_mode_1
+                            values: ["Timer only", "Thermostatic only", "Both"]
+                            on_text: app.stage_setting('relay_1_control_mode', self.text); setattr(app, 'relay_control_mode_1', self.text)
+                        ScaledSmallSpinner:
+                            id: relay2_mode
+                            text: app.relay_control_mode_2
+                            values: ["Timer only", "Thermostatic only", "Both"]
+                            on_text: app.stage_setting('relay_2_control_mode', self.text); setattr(app, 'relay_control_mode_2', self.text)
+                    Widget:
+                        size_hint_y: 1
                     StandardSettingsFooter:
 
             TabbedPanelItem:
@@ -478,6 +524,73 @@
                                     active: app.system_logging_enabled
                                     on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
                     StandardSettingsFooter:
+
+            TabbedPanelItem:
+                text: 'UPDATES'
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: [0, 5, 0, 0]
+                    BoxLayout:
+                        orientation: 'vertical'
+                        padding: 10
+                        size_hint_y: 1
+                        Text_Medium:
+                            text: "Software Update Log"
+                            size_hint_y: None
+                            height: Window.height * 0.07
+                            color: 0.7, 0.7, 0.7, 1
+                        TextInput:
+                            text: app.update_log_text
+                            readonly: True
+                            font_size: Window.height * 0.03
+                            background_color: 0.15, 0.15, 0.15, 1
+                            foreground_color: 0.9, 0.9, 0.9, 1
+                    UpdatesFooter:
+
+            TabbedPanelItem:
+                text: 'ABOUT'
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: [0, 5, 0, 0]
+                    ScrollView:
+                        do_scroll_x: False
+                        size_hint_x: 1
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: self.minimum_height
+                            padding: [10, 10]
+                            spacing: 10
+                            Text_Large:
+                                text: "GrowStation"
+                                color: 1, 0.6, 0, 1
+                                size_hint_y: None
+                                height: Window.height * 0.05
+                            Text_Medium:
+                                text: "Grow station relay and temperature control. Controls 3 relays (lights, fans, heaters) with schedules and up to 3 DS18B20 temperature sensors."
+                                bold: False
+                                size_hint_y: None
+                                height: self.texture_size[1]
+                                text_size: self.width, None
+                                halign: 'left'
+                                color: 0.8, 0.8, 0.8, 1
+                            Widget:
+                                size_hint_y: None
+                                height: 20
+                            Text_Large:
+                                text: "KegLevel Brands"
+                                color: 1, 0.6, 0, 1
+                                size_hint_y: None
+                                height: Window.height * 0.05
+                            Text_Medium:
+                                text: "GrowStation(c) and other KegLevel names and program code are copyrighted. This material is protected by copyright law."
+                                bold: False
+                                size_hint_y: None
+                                height: self.texture_size[1]
+                                text_size: self.width, None
+                                halign: 'left'
+                                color: 0.8, 0.8, 0.8, 1
+                    AboutFooter:
 
 # --- ROOT ---
 ScreenManager:
