@@ -94,7 +94,6 @@ class DirtyPopup(Popup):
 
 
 class GrowStationApp(App):
-    use_custom_kv = True  # Prevent auto-load; we load once manually in build() to avoid double-load
     col_theme_blue = ListProperty([0.2, 0.8, 1, 1])
     log_text = StringProperty("[System] GrowStation initializing.\n")
     temp_units = StringProperty("F")
@@ -182,6 +181,10 @@ class GrowStationApp(App):
             self.log_system_message(msg)
         except Exception as e:
             print(f"Temp snapshot error: {e}")
+
+    def load_kv(self, filename=None):
+        """Suppress Kivy's automatic KV discovery; we load manually in build() exactly once."""
+        pass
 
     def build(self):
         self.title = "GrowStation"
