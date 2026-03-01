@@ -56,10 +56,10 @@
 
 <TabButton@ToggleButton>:
     group: 'settings_tabs'
-    font_size: Window.height * 0.035
+    font_size: '16sp'
     bold: True
     background_normal: ''
-    background_color: (0.2, 0.2, 0.2, 1) if self.state == 'normal' else (0.2, 0.8, 1, 1)
+    background_color: (0.2, 0.2, 0.2, 1) if self.state == 'normal' else (1, 0.75, 0, 1)
     color: (1, 1, 1, 1) if self.state == 'normal' else (0, 0, 0, 1)
     allow_no_selection: False
 
@@ -386,6 +386,12 @@
             transition: NoTransition()
             Screen:
                 name: 'tab_schedules'
+                canvas.before:
+                    Color:
+                        rgba: 0.1, 0.1, 0.1, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
                 ScrollView:
                     do_scroll_x: False
                     BoxLayout:
@@ -401,6 +407,12 @@
                             height: 80
             Screen:
                 name: 'tab_relays'
+                canvas.before:
+                    Color:
+                        rgba: 0.1, 0.1, 0.1, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
                 ScrollView:
                     do_scroll_x: False
                     BoxLayout:
@@ -464,6 +476,12 @@
                                 on_text: app.stage_setting('relay_2_control_mode', self.text); setattr(app, 'relay_control_mode_2', self.text)
             Screen:
                 name: 'tab_sensors'
+                canvas.before:
+                    Color:
+                        rgba: 0.1, 0.1, 0.1, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
                 ScrollView:
                     do_scroll_x: False
                     BoxLayout:
@@ -514,6 +532,12 @@
                                 on_text: app.stage_setting('sensor_2_display_name', self.text); setattr(app, 'temp_name_3', self.text)
             Screen:
                 name: 'tab_system'
+                canvas.before:
+                    Color:
+                        rgba: 0.1, 0.1, 0.1, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
                 ScrollView:
                     do_scroll_x: False
                     BoxLayout:
@@ -565,6 +589,12 @@
                                 on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
             Screen:
                 name: 'tab_updates'
+                canvas.before:
+                    Color:
+                        rgba: 0.1, 0.1, 0.1, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
                 BoxLayout:
                     orientation: 'vertical'
                     padding: [5, 10]
@@ -581,6 +611,12 @@
                         foreground_color: 0.9, 0.9, 0.9, 1
             Screen:
                 name: 'tab_about'
+                canvas.before:
+                    Color:
+                        rgba: 0.1, 0.1, 0.1, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
                 ScrollView:
                     do_scroll_x: False
                     BoxLayout:
@@ -619,48 +655,132 @@
                             halign: 'left'
                             color: 0.8, 0.8, 0.8, 1
 
-        # --- FOOTER (single row, switches per tab) ---
+        # --- FOOTER (single row, KegLevel-style inline buttons) ---
         ScreenManager:
             id: settings_footer
             size_hint_y: None
-            height: Window.height * 0.12
+            height: 60
             transition: NoTransition()
             Screen:
                 name: 'footer_schedules'
                 BoxLayout:
                     padding: 5
-                    StandardSettingsFooter:
-                        size_hint_y: 1
+                    spacing: 10
+                    ScaledButton:
+                        text: "EXIT"
+                        on_release: app.attempt_exit_settings()
+                    ScaledButton:
+                        text: "HELP"
+                    Label:
+                        text: ""
+                    ScaledButton:
+                        text: "RESET/DEFAULTS"
+                        on_release: app.reset_defaults()
+                    ScaledButton:
+                        text: "SAVE"
+                        background_color: 0.2, 0.8, 0.2, 1
+                        on_release: app.save_current_tab()
             Screen:
                 name: 'footer_relays'
                 BoxLayout:
                     padding: 5
-                    StandardSettingsFooter:
-                        size_hint_y: 1
+                    spacing: 10
+                    ScaledButton:
+                        text: "EXIT"
+                        on_release: app.attempt_exit_settings()
+                    ScaledButton:
+                        text: "HELP"
+                    Label:
+                        text: ""
+                    ScaledButton:
+                        text: "RESET/DEFAULTS"
+                        on_release: app.reset_defaults()
+                    ScaledButton:
+                        text: "SAVE"
+                        background_color: 0.2, 0.8, 0.2, 1
+                        on_release: app.save_current_tab()
             Screen:
                 name: 'footer_sensors'
                 BoxLayout:
                     padding: 5
-                    StandardSettingsFooter:
-                        size_hint_y: 1
+                    spacing: 10
+                    ScaledButton:
+                        text: "EXIT"
+                        on_release: app.attempt_exit_settings()
+                    ScaledButton:
+                        text: "HELP"
+                    Label:
+                        text: ""
+                    ScaledButton:
+                        text: "RESET/DEFAULTS"
+                        on_release: app.reset_defaults()
+                    ScaledButton:
+                        text: "SAVE"
+                        background_color: 0.2, 0.8, 0.2, 1
+                        on_release: app.save_current_tab()
             Screen:
                 name: 'footer_system'
                 BoxLayout:
                     padding: 5
-                    StandardSettingsFooter:
-                        size_hint_y: 1
+                    spacing: 10
+                    ScaledButton:
+                        text: "EXIT"
+                        on_release: app.attempt_exit_settings()
+                    ScaledButton:
+                        text: "HELP"
+                    Label:
+                        text: ""
+                    ScaledButton:
+                        text: "RESET/DEFAULTS"
+                        on_release: app.reset_defaults()
+                    ScaledButton:
+                        text: "SAVE"
+                        background_color: 0.2, 0.8, 0.2, 1
+                        on_release: app.save_current_tab()
             Screen:
                 name: 'footer_updates'
                 BoxLayout:
                     padding: 5
-                    UpdatesFooter:
-                        size_hint_y: 1
+                    spacing: 10
+                    ScaledButton:
+                        text: "EXIT"
+                        on_release: app.attempt_exit_settings()
+                    ScaledButton:
+                        text: "HELP"
+                    ScaledButton:
+                        text: "CHECK"
+                        background_color: 0.2, 0.6, 0.8, 1
+                        on_release: app.check_for_updates()
+                    ScaledButton:
+                        text: "INSTALL"
+                        disabled: not app.is_update_available
+                        background_disabled_normal: ''
+                        background_disabled_down: ''
+                        background_color: (0.2, 0.8, 0.2, 1) if app.is_update_available else (0.3, 0.3, 0.3, 1)
+                        on_release: app.run_update_script()
+                    ScaledButton:
+                        text: "RESTART APP"
+                        disabled: not app.is_install_successful
+                        background_disabled_normal: ''
+                        background_disabled_down: ''
+                        background_color: (1, 0.6, 0, 1) if app.is_install_successful else (0.3, 0.3, 0.3, 1)
+                        on_release: app.restart_application()
             Screen:
                 name: 'footer_about'
                 BoxLayout:
                     padding: 5
-                    AboutFooter:
-                        size_hint_y: 1
+                    spacing: 10
+                    ScaledButton:
+                        text: "EXIT"
+                        on_release: app.attempt_exit_settings()
+                    ScaledButton:
+                        text: "HELP"
+                    Label:
+                        text: ""
+                    Label:
+                        text: ""
+                    Label:
+                        text: ""
 
 # --- ROOT ---
 ScreenManager:
