@@ -113,6 +113,9 @@ class GrowStationApp(App):
     temp_name_1 = StringProperty("Sensor 1")
     temp_name_2 = StringProperty("Sensor 2")
     temp_name_3 = StringProperty("Sensor 3")
+    sensor_id_1 = StringProperty("unassigned")
+    sensor_id_2 = StringProperty("unassigned")
+    sensor_id_3 = StringProperty("unassigned")
     relay_active_high = BooleanProperty(False)
     logging_interval_min = StringProperty("10")
     update_log_text = StringProperty("Click CHECK to check for app updates.\n")
@@ -248,6 +251,7 @@ class GrowStationApp(App):
         for i in range(3):
             sc = self.settings_manager.get_sensor_config(i)
             setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
+            setattr(self, f"sensor_id_{i+1}", sc.get("ds18b20_id", "unassigned"))
         self._update_temps()
 
     def go_to_screen(self, name, direction="left"):

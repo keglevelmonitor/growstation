@@ -494,39 +494,54 @@
                             size_hint_y: None
                             height: 40
                             on_release: app.scan_sensors()
-                        SettingRow:
+                        GridLayout:
+                            cols: 4
+                            spacing: 10
+                            size_hint_y: None
+                            height: self.minimum_height
+                            row_default_height: Window.height * 0.08
+                            Label:
+                                text: ""
+                                size_hint_x: None
+                                width: 100
+                            Text_Medium:
+                                text: "Sensor 1"
+                                halign: 'center'
+                                text_size: self.size
+                            Text_Medium:
+                                text: "Sensor 2"
+                                halign: 'center'
+                                text_size: self.size
+                            Text_Medium:
+                                text: "Sensor 3"
+                                halign: 'center'
+                                text_size: self.size
                             SettingLabel:
-                                text: "Sensor 1 ID"
+                                text: "ID"
+                                size_hint_x: None
+                                width: 100
                             ScaledSmallSpinner:
-                                text: "unassigned"
+                                text: app.sensor_id_1
                                 values: app.available_sensors
-                        SettingRow:
+                                on_text: app.stage_setting('sensor_0_ds18b20_id', self.text); setattr(app, 'sensor_id_1', self.text)
+                            ScaledSmallSpinner:
+                                text: app.sensor_id_2
+                                values: app.available_sensors
+                                on_text: app.stage_setting('sensor_1_ds18b20_id', self.text); setattr(app, 'sensor_id_2', self.text)
+                            ScaledSmallSpinner:
+                                text: app.sensor_id_3
+                                values: app.available_sensors
+                                on_text: app.stage_setting('sensor_2_ds18b20_id', self.text); setattr(app, 'sensor_id_3', self.text)
                             SettingLabel:
-                                text: "Sensor 1 Name"
+                                text: "Name"
+                                size_hint_x: None
+                                width: 100
                             ScaledSmallTextInput:
                                 text: app.temp_name_1
                                 on_text: app.stage_setting('sensor_0_display_name', self.text); setattr(app, 'temp_name_1', self.text)
-                        SettingRow:
-                            SettingLabel:
-                                text: "Sensor 2 ID"
-                            ScaledSmallSpinner:
-                                text: "unassigned"
-                                values: app.available_sensors
-                        SettingRow:
-                            SettingLabel:
-                                text: "Sensor 2 Name"
                             ScaledSmallTextInput:
                                 text: app.temp_name_2
                                 on_text: app.stage_setting('sensor_1_display_name', self.text); setattr(app, 'temp_name_2', self.text)
-                        SettingRow:
-                            SettingLabel:
-                                text: "Sensor 3 ID"
-                            ScaledSmallSpinner:
-                                text: "unassigned"
-                                values: app.available_sensors
-                        SettingRow:
-                            SettingLabel:
-                                text: "Sensor 3 Name"
                             ScaledSmallTextInput:
                                 text: app.temp_name_3
                                 on_text: app.stage_setting('sensor_2_display_name', self.text); setattr(app, 'temp_name_3', self.text)
@@ -617,43 +632,83 @@
                     Rectangle:
                         pos: self.pos
                         size: self.size
-                ScrollView:
-                    do_scroll_x: False
-                    BoxLayout:
-                        orientation: 'vertical'
-                        size_hint_y: None
-                        height: self.minimum_height
-                        padding: [10, 10]
-                        spacing: 10
-                        Text_Large:
-                            text: "GrowStation"
-                            color: 1, 0.6, 0, 1
+                BoxLayout:
+                    orientation: 'horizontal'
+                    padding: [10, 10]
+                    spacing: 10
+                    size_hint_y: 1
+                    ScrollView:
+                        do_scroll_x: False
+                        size_hint_x: 0.75
+                        BoxLayout:
+                            orientation: 'vertical'
                             size_hint_y: None
-                            height: Window.height * 0.05
-                        Text_Medium:
-                            text: "Grow station relay and temperature control. Controls 3 relays (lights, fans, heaters) with schedules and up to 3 DS18B20 temperature sensors."
-                            bold: False
-                            size_hint_y: None
-                            height: self.texture_size[1]
-                            text_size: self.width, None
-                            halign: 'left'
-                            color: 0.8, 0.8, 0.8, 1
-                        Widget:
-                            size_hint_y: None
-                            height: 20
-                        Text_Large:
-                            text: "KegLevel Brands"
-                            color: 1, 0.6, 0, 1
-                            size_hint_y: None
-                            height: Window.height * 0.05
-                        Text_Medium:
-                            text: "GrowStation(c) and other KegLevel names and program code are copyrighted. This material is protected by copyright law."
-                            bold: False
-                            size_hint_y: None
-                            height: self.texture_size[1]
-                            text_size: self.width, None
-                            halign: 'left'
-                            color: 0.8, 0.8, 0.8, 1
+                            height: self.minimum_height
+                            spacing: 10
+                            Text_Large:
+                                text: "KegLevel Brands"
+                                color: 1, 0.6, 0, 1
+                                size_hint_y: None
+                                height: Window.height * 0.05
+                                halign: 'left'
+                                text_size: self.size
+                            Text_Medium:
+                                text: "Keglevel Lite(c), KegLevel Monitor(c), KettleBrain(c), and FermVault(c) names, texts, UI/UX and program code are copyrighted. This material and all components of this program are protected by copyright law. Unauthorized use, duplication, or distribution is strictly prohibited."
+                                bold: False
+                                size_hint_y: None
+                                height: self.texture_size[1]
+                                text_size: self.width, None
+                                halign: 'left'
+                                color: 0.8, 0.8, 0.8, 1
+                            Widget:
+                                size_hint_y: None
+                                height: 20
+                            Text_Large:
+                                text: "Support This App"
+                                color: 1, 0.6, 0, 1
+                                size_hint_y: None
+                                height: Window.height * 0.05
+                                halign: 'left'
+                                text_size: self.size
+                            Text_Medium:
+                                text: "This App took hundreds of hours to develop, test, and optimize. Please consider supporting this App with a donation so continuous improvements can be made. If you wish to receive customer support via email, please make a reasonable donation. Customer support requests without a donation may not be considered."
+                                bold: False
+                                size_hint_y: None
+                                height: self.texture_size[1]
+                                text_size: self.width, None
+                                halign: 'left'
+                                color: 0.8, 0.8, 0.8, 1
+                            Widget:
+                                size_hint_y: None
+                                height: 20
+                            Text_Large:
+                                text: "Acknowledgements"
+                                color: 1, 0.6, 0, 1
+                                size_hint_y: None
+                                height: Window.height * 0.05
+                                halign: 'left'
+                                text_size: self.size
+                            Text_Medium:
+                                text: "Icons created by Pixel Perfect - Flaticon\nhttps://www.flaticon.com/free-icons/update"
+                                bold: False
+                                size_hint_y: None
+                                height: self.texture_size[1]
+                                text_size: self.width, None
+                                halign: 'left'
+                                color: 0.8, 0.8, 0.8, 1
+                    AnchorLayout:
+                        anchor_x: 'right'
+                        anchor_y: 'top'
+                        size_hint_x: None
+                        width: 200
+                        size_hint_y: 1
+                        padding: [0, 20, 20, 0]
+                        Image:
+                            source: 'assets/support.gif'
+                            size_hint: None, None
+                            size: 140, 140
+                            allow_stretch: True
+                            keep_ratio: True
 
         # --- FOOTER (single row, KegLevel-style inline buttons) ---
         ScreenManager:
