@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=GrowStation
+Comment=Grow station relay and temperature control
+Path=PLACEHOLDER_PATH
+Exec=PLACEHOLDER_EXEC_PATH
+Icon=growstation
+StartupWMClass=GrowStation
+Terminal=false
+Autostart=false
+Categories=X-Other;

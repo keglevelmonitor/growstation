@@ -1,0 +1,16 @@
+GrowStation Help
+================
+
+GrowStation controls 3 relays (lights, fans, heaters) with schedules and temperature sensors.
+
+Main Screen:
+- Relay cards show ON/OFF status. Use Toggle for manual override.
+- Temperatures from up to 3 DS18B20 sensors.
+
+Settings Tabs:
+- RELAYS: Configure labels and control mode (Timer, Thermostatic, Both).
+- SCHEDULES: Set on/off windows per day (coming in update).
+- SENSORS: Assign DS18B20 IDs and display names.
+- SYSTEM: Temperature units, relay logic, logging.
+
+Data is stored in growstation-data/ (in your home directory).

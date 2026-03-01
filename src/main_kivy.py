@@ -1,0 +1,320 @@
+# GrowStation app — main_kivy.py
+import os
+import sys
+import threading
+import signal
+import time
+import csv
+from datetime import datetime
+
+os.environ["SDL_VIDEO_X11_WMCLASS"] = "GrowStation"
+
+from kivy.config import Config
+current_dir = os.path.dirname(os.path.abspath(__file__))
+icon_path = os.path.join(current_dir, "assets", "growstation.png")
+if os.path.exists(icon_path):
+    Config.set("kivy", "window_icon", icon_path)
+
+Config.set("graphics", "width", "800")
+Config.set("graphics", "height", "417")
+Config.set("graphics", "resizable", "0")
+
+from kivy.app import App
+from kivy.lang import Builder
+from kivy.uix.screenmanager import ScreenManager, Screen
+from kivy.properties import StringProperty, ListProperty, BooleanProperty, ObjectProperty
+from kivy.uix.popup import Popup
+from kivy.clock import Clock, mainthread
+
+try:
+    from settings_manager import SettingsManager
+    from relay_control import RelayControl
+    from control_engine import compute_relay_states
+    from temp_reader import read_temp_f, detect_ds18b20_sensors
+except ImportError as e:
+    print(f"GrowStation Import Error: {e}")
+    SettingsManager = None
+    RelayControl = None
+
+
+def failsafe_cleanup():
+    try:
+        app = App.get_running_app()
+        if app and hasattr(app, "relay_control") and app.relay_control:
+            app.relay_control.cleanup_gpio()
+    except Exception:
+        pass
+
+
+def handle_signal(signum, frame):
+    failsafe_cleanup()
+    os._exit(0)
+
+
+signal.signal(signal.SIGTERM, handle_signal)
+signal.signal(signal.SIGINT, handle_signal)
+if hasattr(signal, "SIGHUP"):
+    signal.signal(signal.SIGHUP, handle_signal)
+
+
+class DashboardScreen(Screen):
+    pass
+
+
+class LogScreen(Screen):
+    pass
+
+
+class SettingsScreen(Screen):
+    pass
+
+
+class DirtyPopup(Popup):
+    pass
+
+
+class GrowStationApp(App):
+    col_theme_blue = ListProperty([0.2, 0.8, 1, 1])
+    log_text = StringProperty("[System] GrowStation initializing.\n")
+    temp_units = StringProperty("F")
+    system_logging_enabled = BooleanProperty(True)
+    is_settings_dirty = BooleanProperty(False)
+    available_sensors = ListProperty(["unassigned"])
+    staged_changes = {}
+    relay_labels = ListProperty(["Relay 1", "Relay 2", "Relay 3"])
+    relay_states = ListProperty([False, False, False])
+    relay_modes = ListProperty(["Timer", "Timer", "Timer"])
+    temp_1 = StringProperty("--.-")
+    temp_2 = StringProperty("--.-")
+    temp_3 = StringProperty("--.-")
+    temp_name_1 = StringProperty("Sensor 1")
+    temp_name_2 = StringProperty("Sensor 2")
+    temp_name_3 = StringProperty("Sensor 3")
+    relay_active_high = BooleanProperty(False)
+    logging_interval_min = StringProperty("10")
+    settings_manager = ObjectProperty(None)
+    relay_control = ObjectProperty(None)
+    _tick_interval = None
+    _last_log_time = 0.0
+
+    def dismiss_splash(self, dt=None):
+        if hasattr(self, "splash_queue") and self.splash_queue:
+            self.splash_queue.put("STOP")
+
+    @mainthread
+    def log_system_message(self, message):
+        ts = datetime.now().strftime("[%Y-%m-%d %H:%M:%S]")
+        self.log_text += f"{ts} {message}\n"
+        if len(self.log_text) > 5000:
+            self.log_text = self.log_text[-4000:]
+        if self.system_logging_enabled and hasattr(self, "settings_manager"):
+            try:
+                data_dir = self.settings_manager.data_dir
+                log_path = os.path.join(data_dir, "system_log.csv")
+                file_exists = os.path.isfile(log_path)
+                with open(log_path, "a", newline="", encoding="utf-8") as f:
+                    if not file_exists:
+                        f.write("Timestamp,Action\n")
+                    clean = message.replace('"', '""')
+                    f.write(f'"{datetime.now().strftime("%Y-%m-%d %H:%M:%S")}","{clean}"\n')
+            except Exception as e:
+                print(f"Log write error: {e}")
+
+    def _write_temp_snapshot(self):
+        if not self.settings_manager or not self.system_logging_enabled:
+            return
+        try:
+            temps = []
+            for i in range(3):
+                sc = self.settings_manager.get_sensor_config(i)
+                sid = sc.get("ds18b20_id", "unassigned")
+                t = read_temp_f(sid) if sid and sid != "unassigned" else None
+                name = sc.get("display_name", f"Sensor {i+1}")
+                temps.append(f"{name}={t:.1f}" if t is not None else f"{name}=--.-")
+            msg = "Temp snapshot: " + ", ".join(temps)
+            self.log_system_message(msg)
+        except Exception as e:
+            print(f"Temp snapshot error: {e}")
+
+    def build(self):
+        self.title = "GrowStation"
+        kv_path = os.path.join(current_dir, "growstation.kv")
+        if os.path.exists(kv_path):
+            root = Builder.load_file(kv_path)
+        else:
+            from kivy.uix.label import Label
+            root = Label(text="growstation.kv not found", font_size="24sp")
+        self.sm = root if hasattr(root, "current") else None
+        Clock.schedule_once(self._start_backend, 0.2)
+        return root
+
+    def _start_backend(self, dt=None):
+        if SettingsManager is None or RelayControl is None:
+            self.log_system_message("BACKEND ERROR: Modules not found.")
+            return
+        try:
+            self.log_system_message("Initializing backend...")
+            self.settings_manager = SettingsManager()
+            self.relay_control = RelayControl(self.settings_manager)
+            self.relay_control.set_logger(self.log_system_message)
+            self._refresh_ui_from_settings()
+            self._tick_interval = Clock.schedule_interval(self._tick, 1.0)
+            self.log_system_message("Backend initialized.")
+        except Exception as e:
+            self.log_system_message(f"CRITICAL ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+
+    def _tick(self, dt):
+        if not self.settings_manager or not self.relay_control:
+            return
+        desired = compute_relay_states(self.settings_manager)
+        self.relay_control.set_relay_states(desired)
+        for i in range(3):
+            self.relay_states[i] = self.relay_control.is_relay_on(i)
+        self._update_temps()
+        self._update_relay_labels_and_modes()
+        now = time.time()
+        interval_min = float(self.logging_interval_min or 10)
+        if self.system_logging_enabled and interval_min > 0 and (now - self._last_log_time) >= interval_min * 60:
+            self._last_log_time = now
+            self._write_temp_snapshot()
+
+    def _update_temps(self):
+        for i in range(3):
+            sc = self.settings_manager.get_sensor_config(i)
+            sid = sc.get("ds18b20_id", "unassigned")
+            t = read_temp_f(sid) if sid and sid != "unassigned" else None
+            if t is not None:
+                if self.temp_units == "C":
+                    t = (t - 32) * 5 / 9
+                setattr(self, f"temp_{i+1}", f"{t:.1f}")
+            else:
+                setattr(self, f"temp_{i+1}", "--.-")
+            setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
+
+    def _update_relay_labels_and_modes(self):
+        for i in range(3):
+            cfg = self.settings_manager.get_relay_config(i)
+            self.relay_labels[i] = cfg.get("label", f"Relay {i+1}")
+            m = cfg.get("control_mode", "Timer only")
+            if m == "Timer only":
+                self.relay_modes[i] = "Timer"
+            elif m == "Thermostatic only":
+                self.relay_modes[i] = "Thermo"
+            else:
+                self.relay_modes[i] = "Both"
+
+    def _refresh_ui_from_settings(self):
+        if not self.settings_manager:
+            return
+        sys_settings = self.settings_manager.get_system_settings()
+        self.temp_units = sys_settings.get("temp_units", "F")
+        self.relay_active_high = sys_settings.get("relay_active_high", False)
+        self.system_logging_enabled = sys_settings.get("system_logging_enabled", True)
+        self.logging_interval_min = str(sys_settings.get("logging_interval_min", 10))
+        for i in range(3):
+            cfg = self.settings_manager.get_relay_config(i)
+            self.relay_labels[i] = cfg.get("label", f"Relay {i+1}")
+            m = cfg.get("control_mode", "Timer only")
+            self.relay_modes[i] = "Timer" if m == "Timer only" else ("Thermo" if m == "Thermostatic only" else "Both")
+        for i in range(3):
+            sc = self.settings_manager.get_sensor_config(i)
+            setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
+        self._update_temps()
+
+    def go_to_screen(self, name, direction="left"):
+        if self.sm:
+            self.sm.current = name
+
+    def attempt_exit_settings(self, tab_name="none"):
+        if self.is_settings_dirty:
+            DirtyPopup().open()
+        else:
+            self.go_to_screen("dashboard")
+
+    def discard_changes(self):
+        self.staged_changes.clear()
+        self.is_settings_dirty = False
+        self._refresh_ui_from_settings()
+        self.go_to_screen("dashboard")
+
+    def save_and_continue(self):
+        self._save_staged_changes()
+        self.staged_changes.clear()
+        self.is_settings_dirty = False
+        self.go_to_screen("dashboard")
+
+    def save_current_tab(self, tab_name="none"):
+        self._save_staged_changes()
+        self.staged_changes.clear()
+        self.is_settings_dirty = False
+        self._refresh_ui_from_settings()
+
+    def _save_staged_changes(self):
+        if not self.settings_manager:
+            return
+        for key, val in self.staged_changes.items():
+            if key.startswith("relay_"):
+                parts = key.split("_")
+                if len(parts) >= 3:
+                    idx = int(parts[1])
+                    field = "_".join(parts[2:])
+                    cfg = self.settings_manager.get_relay_config(idx)
+                    cfg[field] = val
+                    self.settings_manager.set_relay_config(idx, cfg)
+            elif key.startswith("sensor_"):
+                parts = key.split("_")
+                if len(parts) >= 3:
+                    idx = int(parts[1])
+                    field = "_".join(parts[2:])
+                    cfg = self.settings_manager.get_sensor_config(idx)
+                    cfg[field] = val
+                    self.settings_manager.set_sensor_config(idx, cfg)
+            elif key in ("temp_units", "relay_active_high", "logging_interval_min", "system_logging_enabled"):
+                v = val
+                if key == "logging_interval_min":
+                    try:
+                        v = int(float(val))
+                    except (ValueError, TypeError):
+                        v = 10
+                elif key == "system_logging_enabled":
+                    v = bool(val)
+                self.settings_manager.save_system_settings({key: v})
+        self.log_system_message("Settings saved.")
+
+    def stage_setting(self, key, value):
+        self.staged_changes[key] = value
+        self.is_settings_dirty = True
+
+    def toggle_relay_manual(self, relay_idx):
+        if not self.relay_control or relay_idx < 0 or relay_idx > 2:
+            return
+        override = self.relay_control.manual_override[relay_idx]
+        if override is True:
+            self.relay_control.set_manual_override(relay_idx, False)
+        elif override is False:
+            self.relay_control.set_manual_override(relay_idx, None)
+        else:
+            self.relay_control.set_manual_override(relay_idx, True)
+
+    def scan_sensors(self):
+        found = detect_ds18b20_sensors()
+        self.available_sensors = ["unassigned"] + found
+        self.log_system_message(f"Sensor scan: found {len(found)} DS18B20.")
+        return found
+
+    def reset_defaults(self, tab_name="none"):
+        # Minimal reset: just refresh from disk (no full factory reset for now)
+        self._refresh_ui_from_settings()
+        self.staged_changes.clear()
+        self.is_settings_dirty = False
+        self.log_system_message("Defaults refreshed.")
+
+
+def main():
+    GrowStationApp().run()
+
+
+if __name__ == "__main__":
+    main()

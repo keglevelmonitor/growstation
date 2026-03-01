@@ -1,0 +1,490 @@
+#:kivy 2.2.0
+#:import Window kivy.core.window.Window
+
+<Text_Small@Label>:
+    font_size: Window.height * 0.03
+    bold: True
+    color: 0.7, 0.7, 0.7, 1
+
+<Text_Medium@Label>:
+    font_size: Window.height * 0.04
+    bold: True
+    color: 0.8, 0.8, 0.8, 1
+
+<Text_Large@Label>:
+    font_size: Window.height * 0.05
+    bold: True
+    color: app.col_theme_blue
+
+<ScaledButton@Button>:
+    font_size: Window.height * 0.04
+    bold: True
+    background_normal: ''
+    background_color: 0.4, 0.4, 0.4, 1
+
+<ScaledSmallButton@Button>:
+    font_size: Window.height * 0.03
+    bold: True
+
+<ScaledSmallSpinner@Spinner>:
+    font_size: Window.height * 0.03
+    bold: True
+
+<ScaledSmallTextInput@TextInput>:
+    font_size: Window.height * 0.03
+    bold: True
+    background_color: 0.4, 0.4, 0.4, 1
+    foreground_color: 1, 1, 1, 1
+    multiline: False
+
+<SettingRow@BoxLayout>:
+    orientation: 'horizontal'
+    spacing: 10
+    size_hint_y: None
+    height: Window.height * 0.08
+    padding: [10, 5]
+
+<SettingLabel@Label>:
+    text_size: self.size
+    halign: 'right'
+    valign: 'middle'
+    size_hint_x: 0.4
+    color: 0.7, 0.7, 0.7, 1
+    font_size: Window.height * 0.03
+    bold: True
+
+<StandardSettingsFooter@GridLayout>:
+    cols: 5
+    size_hint_y: 0.12
+    spacing: 5
+    ScaledButton:
+        text: "EXIT"
+        on_release: app.attempt_exit_settings()
+    ScaledButton:
+        text: "HELP"
+    Label:
+        text: ""
+    ScaledButton:
+        text: "RESET/DEFAULTS"
+        on_release: app.reset_defaults()
+    ScaledButton:
+        text: "SAVE"
+        background_color: 0.2, 0.8, 0.2, 1
+        on_release: app.save_current_tab()
+
+<DirtyPopup@Popup>:
+    title: 'Unsaved Changes'
+    size_hint: 0.8, 0.4
+    auto_dismiss: False
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 10
+        spacing: 10
+        Text_Medium:
+            text: "You have unsaved changes.\nSave before exiting?"
+            halign: 'center'
+        BoxLayout:
+            spacing: 10
+            size_hint_y: None
+            height: 50
+            ScaledButton:
+                text: "DISCARD"
+                background_color: 0.8, 0.2, 0.2, 1
+                on_release: app.discard_changes(); root.dismiss()
+            ScaledButton:
+                text: "CANCEL"
+                on_release: root.dismiss()
+            ScaledButton:
+                text: "SAVE"
+                background_color: 0.2, 0.8, 0.2, 1
+                on_release: app.save_and_continue(); root.dismiss()
+
+# --- DASHBOARD ---
+<DashboardScreen>:
+    name: 'dashboard'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: Window.height * 0.01
+        spacing: Window.height * 0.01
+        canvas.before:
+            Color:
+                rgba: 0.1, 0.1, 0.1, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+
+        BoxLayout:
+            size_hint_y: None
+            height: Window.height * 0.06
+            Text_Large:
+                text: "GrowStation"
+                color: 1, 0.6, 0, 1
+                size_hint_x: 0.5
+
+        GridLayout:
+            cols: 3
+            size_hint_y: 0.5
+            spacing: Window.height * 0.02
+            padding: [0, 5]
+
+            BoxLayout:
+                orientation: 'vertical'
+                spacing: 5
+                canvas.before:
+                    Color:
+                        rgba: 0.2, 0.2, 0.2, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+                padding: [10, 10]
+                Text_Medium:
+                    text: "RELAY 1"
+                    color: 0.7, 0.7, 0.7, 1
+                Text_Medium:
+                    text: app.relay_labels[0] if len(app.relay_labels) > 0 else "Relay 1"
+                    font_size: Window.height * 0.035
+                    color: app.col_theme_blue
+                Text_Medium:
+                    text: "ON" if (app.relay_states[0] if len(app.relay_states) > 0 else False) else "OFF"
+                    color: (0.2, 1, 0.2, 1) if (app.relay_states[0] if len(app.relay_states) > 0 else False) else (0.7, 0.7, 0.7, 1)
+                ScaledButton:
+                    text: "Toggle"
+                    on_release: app.toggle_relay_manual(0)
+                Text_Small:
+                    text: "Mode: " + (app.relay_modes[0] if len(app.relay_modes) > 0 else "Timer")
+                    color: 0.6, 0.6, 0.6, 1
+
+            BoxLayout:
+                orientation: 'vertical'
+                spacing: 5
+                canvas.before:
+                    Color:
+                        rgba: 0.2, 0.2, 0.2, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+                padding: [10, 10]
+                Text_Medium:
+                    text: "RELAY 2"
+                    color: 0.7, 0.7, 0.7, 1
+                Text_Medium:
+                    text: app.relay_labels[1] if len(app.relay_labels) > 1 else "Relay 2"
+                    font_size: Window.height * 0.035
+                    color: app.col_theme_blue
+                Text_Medium:
+                    text: "ON" if (app.relay_states[1] if len(app.relay_states) > 1 else False) else "OFF"
+                    color: (0.2, 1, 0.2, 1) if (app.relay_states[1] if len(app.relay_states) > 1 else False) else (0.7, 0.7, 0.7, 1)
+                ScaledButton:
+                    text: "Toggle"
+                    on_release: app.toggle_relay_manual(1)
+                Text_Small:
+                    text: "Mode: " + (app.relay_modes[1] if len(app.relay_modes) > 1 else "Timer")
+                    color: 0.6, 0.6, 0.6, 1
+
+            BoxLayout:
+                orientation: 'vertical'
+                spacing: 5
+                canvas.before:
+                    Color:
+                        rgba: 0.2, 0.2, 0.2, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+                padding: [10, 10]
+                Text_Medium:
+                    text: "RELAY 3"
+                    color: 0.7, 0.7, 0.7, 1
+                Text_Medium:
+                    text: app.relay_labels[2] if len(app.relay_labels) > 2 else "Relay 3"
+                    font_size: Window.height * 0.035
+                    color: app.col_theme_blue
+                Text_Medium:
+                    text: "ON" if (app.relay_states[2] if len(app.relay_states) > 2 else False) else "OFF"
+                    color: (0.2, 1, 0.2, 1) if (app.relay_states[2] if len(app.relay_states) > 2 else False) else (0.7, 0.7, 0.7, 1)
+                ScaledButton:
+                    text: "Toggle"
+                    on_release: app.toggle_relay_manual(2)
+                Text_Small:
+                    text: "Mode: " + (app.relay_modes[2] if len(app.relay_modes) > 2 else "Timer")
+                    color: 0.6, 0.6, 0.6, 1
+
+        BoxLayout:
+            orientation: 'horizontal'
+            size_hint_y: 0.15
+            spacing: 20
+            padding: [10, 5]
+            canvas.before:
+                Color:
+                    rgba: 0.15, 0.15, 0.15, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+            Text_Medium:
+                text: app.temp_name_1 + ": " + app.temp_1 + ("°F" if app.temp_units == "F" else "°C")
+                size_hint_x: 0.33
+            Text_Medium:
+                text: app.temp_name_2 + ": " + app.temp_2 + ("°F" if app.temp_units == "F" else "°C")
+                size_hint_x: 0.33
+            Text_Medium:
+                text: app.temp_name_3 + ": " + app.temp_3 + ("°F" if app.temp_units == "F" else "°C")
+                size_hint_x: 0.33
+
+        BoxLayout:
+            size_hint_y: 0.12
+            spacing: 10
+            ScaledButton:
+                text: "SYSTEM LOG"
+                on_release: app.go_to_screen('log')
+            ScaledButton:
+                text: "SETTINGS"
+                on_release: app.go_to_screen('settings')
+            ScaledButton:
+                text: "HELP"
+
+# --- LOG SCREEN ---
+<LogScreen>:
+    name: 'log'
+    BoxLayout:
+        orientation: 'vertical'
+        padding: 5
+        spacing: 5
+        BoxLayout:
+            size_hint_y: None
+            height: Window.height * 0.08
+            Text_Large:
+                text: "SYSTEM LOG"
+                size_hint_x: 0.5
+            BoxLayout:
+                size_hint_x: 0.5
+                spacing: 5
+                CheckBox:
+                    active: app.system_logging_enabled
+                    on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
+                Text_Small:
+                    text: "Append to growstation-data/system_log.csv"
+        ScrollView:
+            do_scroll_x: False
+            bar_width: 15
+            bar_color: 0.2, 0.8, 1, 1
+            Label:
+                text: app.log_text
+                font_size: Window.height * 0.035
+                color: 0.8, 0.8, 0.8, 1
+                size_hint_y: None
+                height: self.texture_size[1]
+                text_size: self.width - 20, None
+                halign: 'left'
+                valign: 'top'
+                padding: [10, 10]
+        BoxLayout:
+            size_hint_y: 0.12
+            ScaledButton:
+                text: "EXIT"
+                on_release: app.go_to_screen('dashboard')
+            ScaledButton:
+                text: "HELP"
+
+# --- SETTINGS SCREEN ---
+<SettingsScreen>:
+    name: 'settings'
+    on_enter: app.scan_sensors()
+    BoxLayout:
+        orientation: 'vertical'
+        padding: [10, 5]
+        TabbedPanel:
+            do_default_tab: False
+            tab_width: max(120, self.width / 5)
+
+            TabbedPanelItem:
+                text: 'RELAYS'
+                id: relays_tab
+                BoxLayout:
+                    orientation: 'vertical'
+                    ScrollView:
+                        do_scroll_x: False
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: self.minimum_height
+                            padding: [5, 10]
+                            Label:
+                                text: "Relay 1"
+                                size_hint_y: None
+                                height: 30
+                                bold: True
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Label"
+                                ScaledSmallTextInput:
+                                    text: app.relay_labels[0]
+                                    on_text: app.stage_setting('relay_0_label', self.text); app.relay_labels[0] = self.text
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Control Mode"
+                                ScaledSmallSpinner:
+                                    text: "Timer only"
+                                    values: ["Timer only", "Thermostatic only", "Both"]
+                            Label:
+                                text: "Relay 2"
+                                size_hint_y: None
+                                height: 30
+                                bold: True
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Label"
+                                ScaledSmallTextInput:
+                                    text: app.relay_labels[1]
+                                    on_text: app.stage_setting('relay_1_label', self.text); app.relay_labels[1] = self.text
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Control Mode"
+                                ScaledSmallSpinner:
+                                    text: "Timer only"
+                                    values: ["Timer only", "Thermostatic only", "Both"]
+                            Label:
+                                text: "Relay 3"
+                                size_hint_y: None
+                                height: 30
+                                bold: True
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Label"
+                                ScaledSmallTextInput:
+                                    text: app.relay_labels[2]
+                                    on_text: app.stage_setting('relay_2_label', self.text); app.relay_labels[2] = self.text
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Control Mode"
+                                ScaledSmallSpinner:
+                                    text: "Timer only"
+                                    values: ["Timer only", "Thermostatic only", "Both"]
+                    StandardSettingsFooter:
+
+            TabbedPanelItem:
+                text: 'SCHEDULES'
+                BoxLayout:
+                    orientation: 'vertical'
+                    Label:
+                        text: "Schedule editor (per relay, per day)\nComing in next update."
+                        halign: 'center'
+                        font_size: '18sp'
+                    StandardSettingsFooter:
+
+            TabbedPanelItem:
+                text: 'SENSORS'
+                BoxLayout:
+                    orientation: 'vertical'
+                    ScrollView:
+                        do_scroll_x: False
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: self.minimum_height
+                            padding: [5, 10]
+                            ScaledButton:
+                                text: "Scan Sensors"
+                                size_hint_y: None
+                                height: 40
+                                on_release: app.scan_sensors()
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Sensor 1 ID"
+                                ScaledSmallSpinner:
+                                    text: "unassigned"
+                                    values: app.available_sensors
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Sensor 1 Name"
+                                ScaledSmallTextInput:
+                                    text: app.temp_name_1
+                                    on_text: app.stage_setting('sensor_0_display_name', self.text); setattr(app, 'temp_name_1', self.text)
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Sensor 2 ID"
+                                ScaledSmallSpinner:
+                                    text: "unassigned"
+                                    values: app.available_sensors
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Sensor 2 Name"
+                                ScaledSmallTextInput:
+                                    text: app.temp_name_2
+                                    on_text: app.stage_setting('sensor_1_display_name', self.text); setattr(app, 'temp_name_2', self.text)
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Sensor 3 ID"
+                                ScaledSmallSpinner:
+                                    text: "unassigned"
+                                    values: app.available_sensors
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Sensor 3 Name"
+                                ScaledSmallTextInput:
+                                    text: app.temp_name_3
+                                    on_text: app.stage_setting('sensor_2_display_name', self.text); setattr(app, 'temp_name_3', self.text)
+                    StandardSettingsFooter:
+
+            TabbedPanelItem:
+                text: 'SYSTEM'
+                BoxLayout:
+                    orientation: 'vertical'
+                    ScrollView:
+                        do_scroll_x: False
+                        BoxLayout:
+                            orientation: 'vertical'
+                            size_hint_y: None
+                            height: self.minimum_height
+                            padding: [5, 10]
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Temperature Units"
+                                BoxLayout:
+                                    spacing: 10
+                                    ToggleButton:
+                                        text: "Fahrenheit"
+                                        group: "units"
+                                        state: 'down' if app.temp_units == 'F' else 'normal'
+                                        on_release: app.stage_setting('temp_units', 'F'); app.temp_units = 'F'
+                                    ToggleButton:
+                                        text: "Celsius"
+                                        group: "units"
+                                        state: 'down' if app.temp_units == 'C' else 'normal'
+                                        on_release: app.stage_setting('temp_units', 'C'); app.temp_units = 'C'
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Relay Logic"
+                                BoxLayout:
+                                    spacing: 10
+                                    ToggleButton:
+                                        text: "Active HIGH"
+                                        group: "relay_logic"
+                                        state: 'down' if app.relay_active_high else 'normal'
+                                        on_release: app.stage_setting('relay_active_high', True); app.relay_active_high = True
+                                    ToggleButton:
+                                        text: "Active LOW"
+                                        group: "relay_logic"
+                                        state: 'down' if not app.relay_active_high else 'normal'
+                                        on_release: app.stage_setting('relay_active_high', False); app.relay_active_high = False
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Log Interval (min)"
+                                ScaledSmallTextInput:
+                                    text: app.logging_interval_min
+                                    on_text: app.stage_setting('logging_interval_min', self.text); app.logging_interval_min = self.text
+                            SettingRow:
+                                SettingLabel:
+                                    text: "Detailed Log"
+                                CheckBox:
+                                    active: app.system_logging_enabled
+                                    on_active: app.stage_setting('system_logging_enabled', self.active); app.system_logging_enabled = self.active
+                    StandardSettingsFooter:
+
+# --- ROOT ---
+ScreenManager:
+    id: screen_manager
+    DashboardScreen:
+        id: dashboard
+    LogScreen:
+        id: log
+    SettingsScreen:
+        id: settings
