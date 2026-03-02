@@ -657,32 +657,48 @@ class GrowStationApp(App):
         self.is_update_available = False
 
         def _install():
-            script_url = "https://github.com/keglevelmonitor/growstation/raw/main/update.sh"
             try:
                 src_dir = os.path.dirname(os.path.abspath(__file__))
                 project_root = os.path.dirname(src_dir)
-                local_script_path = os.path.join(project_root, "update.sh")
-                Clock.schedule_once(lambda dt: self._append_update_log(f"Downloading update script...\n"), 0)
-                subprocess.run(["curl", "-L", "-o", local_script_path, script_url], check=True)
-                subprocess.run(["chmod", "+x", local_script_path], check=True)
-                Clock.schedule_once(lambda dt: self._append_update_log("Executing update.sh...\n"), 0)
-                process = subprocess.Popen(
-                    ["./update.sh"],
-                    cwd=project_root,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT,
-                    text=True,
-                )
+
+                if sys.platform == "win32":
+                    # Windows: run update.bat (git pull + pip install, no bash needed)
+                    bat_path = os.path.join(project_root, "update.bat")
+                    Clock.schedule_once(lambda dt: self._append_update_log("Running update.bat...\n"), 0)
+                    process = subprocess.Popen(
+                        ["cmd", "/c", bat_path],
+                        cwd=project_root,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                    )
+                else:
+                    # Linux/Pi: download and run update.sh
+                    script_url = "https://github.com/keglevelmonitor/growstation/raw/main/update.sh"
+                    local_script_path = os.path.join(project_root, "update.sh")
+                    Clock.schedule_once(lambda dt: self._append_update_log("Downloading update script...\n"), 0)
+                    subprocess.run(["curl", "-L", "-o", local_script_path, script_url], check=True)
+                    subprocess.run(["chmod", "+x", local_script_path], check=True)
+                    Clock.schedule_once(lambda dt: self._append_update_log("Executing update.sh...\n"), 0)
+                    process = subprocess.Popen(
+                        ["./update.sh"],
+                        cwd=project_root,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                    )
+
                 for line in process.stdout:
                     Clock.schedule_once(lambda dt, l=line: self._append_update_log(l), 0)
                 process.wait()
                 if process.returncode == 0:
                     Clock.schedule_once(lambda dt: self._append_update_log("\n[SUCCESS] Update finished.\nClick RESTART APP to apply changes."), 0)
-                    self.is_install_successful = True
+                    Clock.schedule_once(lambda dt: setattr(self, "is_install_successful", True), 0)
                 else:
                     Clock.schedule_once(lambda dt: self._append_update_log(f"\n[FAILURE] Script exited with code {process.returncode}"), 0)
             except Exception as e:
-                Clock.schedule_once(lambda dt: self._append_update_log(f"\n[CRITICAL ERROR] {str(e)}"), 0)
+                err = str(e)
+                Clock.schedule_once(lambda dt: self._append_update_log(f"\n[CRITICAL ERROR] {err}"), 0)
 
         threading.Thread(target=_install, daemon=True).start()
 
