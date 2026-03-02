@@ -673,6 +673,7 @@ class GrowStationApp(App):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         text=True,
+                        creationflags=subprocess.CREATE_NO_WINDOW,
                     )
                 else:
                     # Linux/Pi: download and run update.sh
