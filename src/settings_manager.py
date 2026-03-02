@@ -115,7 +115,7 @@ class SettingsManager:
     def _save_all_settings(self):
         try:
             with self._data_lock:
-                with open(self.settings_file, "w") as f:
+                with open(self.settings_file, "w", encoding='utf-8') as f:
                     json.dump(self.settings, f, indent=4)
         except Exception as e:
             print(f"[SettingsManager] Failed to save: {e}")
