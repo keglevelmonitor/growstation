@@ -1,5 +1,6 @@
 # GrowStation app — main_kivy.py
 # test for app update function - round 1
+# test for update function with windows deployment
 import os
 import sys
 import subprocess
