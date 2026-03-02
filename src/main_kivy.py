@@ -311,11 +311,8 @@ class GrowStationApp(App):
             m = cfg.get("control_mode", "Timer only")
             self.relay_modes[i] = "Timer" if m == "Timer only" else ("Thermo" if m == "Thermostatic only" else "Both")
             setattr(self, f"relay_control_mode_{i}", m)
-            # Restore op_mode (skip never persists — it reverts to schedule on restart)
-            saved_mode = cfg.get("op_mode", "schedule")
-            if saved_mode == "skip":
-                saved_mode = "schedule"
-            setattr(self, f"relay_op_mode_{i}", saved_mode)
+            # Always start in SCHEDULE mode on boot regardless of last-saved mode
+            setattr(self, f"relay_op_mode_{i}", "schedule")
             setattr(self, f"relay_manual_state_{i}", bool(cfg.get("manual_state", False)))
         for i in range(3):
             sc = self.settings_manager.get_sensor_config(i)
@@ -543,8 +540,11 @@ class GrowStationApp(App):
         self.is_settings_dirty = True
 
     def set_relay_op_mode(self, relay_idx, mode):
-        """Switch relay to 'schedule', 'skip', or 'manual' mode."""
+        """Switch relay to 'schedule', 'skip', or 'manual' mode.
+        Guard against touch-propagation from other screens (NoTransition is instant)."""
         if relay_idx < 0 or relay_idx > 2:
+            return
+        if self.sm and self.sm.current != 'dashboard':
             return
         current_state = bool(self.relay_states[relay_idx]) if relay_idx < len(self.relay_states) else False
         setattr(self, f"relay_op_mode_{relay_idx}", mode)
@@ -557,8 +557,10 @@ class GrowStationApp(App):
         self.log_system_message(f"Relay {relay_idx + 1} → {mode.upper()} mode")
 
     def relay_on_off_press(self, relay_idx):
-        """Toggle ON/OFF while in SKIP or MANUAL mode. No-op in SCHEDULE mode."""
+        """Toggle ON/OFF while in SKIP or MANUAL mode. No-op in SCHEDULE mode or non-dashboard screens."""
         if relay_idx < 0 or relay_idx > 2:
+            return
+        if self.sm and self.sm.current != 'dashboard':
             return
         mode = getattr(self, f"relay_op_mode_{relay_idx}", "schedule")
         if mode == "skip":
