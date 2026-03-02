@@ -480,8 +480,13 @@ class GrowStationApp(App):
     def _save_staged_changes(self):
         if not self.settings_manager:
             return
+        # System-setting keys must be checked FIRST — "relay_active_high" starts with
+        # "relay_" so it would otherwise crash in the relay-config branch below.
+        _system_keys = {"temp_units", "relay_active_high", "logging_interval_min", "system_logging_enabled"}
         for key, val in self.staged_changes.items():
-            if key.startswith("relay_"):
+            if key in _system_keys:
+                pass  # handled in the dedicated system-settings pass below
+            elif key.startswith("relay_"):
                 parts = key.split("_")
                 if len(parts) >= 3:
                     idx = int(parts[1])
@@ -497,7 +502,9 @@ class GrowStationApp(App):
                     cfg = self.settings_manager.get_sensor_config(idx)
                     cfg[field] = val
                     self.settings_manager.set_sensor_config(idx, cfg)
-            elif key in ("temp_units", "relay_active_high", "logging_interval_min", "system_logging_enabled"):
+        # Now handle system settings (separate pass to avoid prefix-collision above)
+        for key, val in self.staged_changes.items():
+            if key in _system_keys:
                 v = val
                 if key == "logging_interval_min":
                     try:
