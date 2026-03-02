@@ -1,4 +1,5 @@
 # GrowStation app — main_kivy.py
+# test for app update function - round 1
 import os
 import sys
 import subprocess
