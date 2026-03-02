@@ -8,6 +8,7 @@ import threading
 import signal
 import time
 import csv
+import multiprocessing
 from datetime import datetime
 
 os.environ["SDL_VIDEO_X11_WMCLASS"] = "GrowStation"
@@ -246,10 +247,12 @@ class GrowStationApp(App):
             self._last_temp_read_time = time.time()
             self._tick_interval = Clock.schedule_interval(self._tick, 1.0)
             self.log_system_message("Backend initialized.")
+            Clock.schedule_once(self.dismiss_splash, 0.5)
         except Exception as e:
             self.log_system_message(f"CRITICAL ERROR: {e}")
             import traceback
             traceback.print_exc()
+            self.dismiss_splash()
 
     def _tick(self, dt):
         if not self.settings_manager or not self.relay_control:
@@ -778,9 +781,70 @@ class GrowStationApp(App):
         os.execv(python, [python, script] + args)
 
 
+def run_splash_screen(queue):
+    """
+    Runs a standalone Tkinter loading dialog in a separate process.
+    This appears immediately, independent of Kivy's loading time.
+    """
+    import tkinter as tk
+
+    try:
+        root = tk.Tk()
+        root.overrideredirect(True)
+        root.attributes('-topmost', True)
+
+        width = 320
+        height = 80
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
+        x = (screen_width // 2) - (width // 2)
+        y = (screen_height // 2) - (height // 2)
+
+        root.geometry(f'{width}x{height}+{x}+{y}')
+        root.configure(bg='#222222')
+
+        frame = tk.Frame(root, bg='#222222', highlightbackground='#4CAF50', highlightthickness=2)
+        frame.pack(fill='both', expand=True)
+
+        lbl = tk.Label(frame, text="GrowStation App Loading...", font=("Arial", 16, "bold"), fg="#4CAF50", bg="#222222")
+        lbl.pack(expand=True)
+
+        root.update()
+
+        def check_kill():
+            if not queue.empty():
+                root.destroy()
+            else:
+                root.after(100, check_kill)
+
+        root.after(100, check_kill)
+        root.mainloop()
+    except Exception as e:
+        print(f"Splash screen error: {e}")
+
+
 def main():
     GrowStationApp().run()
 
 
 if __name__ == "__main__":
-    main()
+    # 1. Start the Splash Screen immediately in a separate process
+    # We use multiprocessing so it doesn't block the main thread imports
+    splash_queue = multiprocessing.Queue()
+    splash_process = multiprocessing.Process(target=run_splash_screen, args=(splash_queue,))
+    splash_process.start()
+
+    try:
+        # 2. Initialize and Run the App
+        app = GrowStationApp()
+        # Pass the queue so the App can kill the splash when ready
+        app.splash_queue = splash_queue
+        app.run()
+
+    except KeyboardInterrupt:
+        print("\nGrowStation App interrupted by user.")
+
+    finally:
+        # Ensure splash process is definitely dead on exit
+        if splash_process.is_alive():
+            splash_process.terminate()
