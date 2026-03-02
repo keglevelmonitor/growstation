@@ -212,8 +212,6 @@
                     bold: True
                     background_normal: ''
                     background_color: (0.15, 0.75, 0.15, 1) if (app.relay_states[0] if len(app.relay_states) > 0 else False) else (0.38, 0.38, 0.38, 1)
-                    opacity: 1.0 if app.relay_op_mode_0 != 'schedule' else 0.55
-                    on_release: app.relay_on_off_press(0)
                 Label:
                     text: ("NEXT SCHED: " + app.relay_next_action_0 + " at " + app.relay_next_time_0) if app.relay_next_action_0 != '--' else "NEXT SCHED: --"
                     font_size: Window.height * 0.04
@@ -277,8 +275,6 @@
                     bold: True
                     background_normal: ''
                     background_color: (0.15, 0.75, 0.15, 1) if (app.relay_states[1] if len(app.relay_states) > 1 else False) else (0.38, 0.38, 0.38, 1)
-                    opacity: 1.0 if app.relay_op_mode_1 != 'schedule' else 0.55
-                    on_release: app.relay_on_off_press(1)
                 Label:
                     text: ("NEXT SCHED: " + app.relay_next_action_1 + " at " + app.relay_next_time_1) if app.relay_next_action_1 != '--' else "NEXT SCHED: --"
                     font_size: Window.height * 0.04
@@ -342,8 +338,6 @@
                     bold: True
                     background_normal: ''
                     background_color: (0.15, 0.75, 0.15, 1) if (app.relay_states[2] if len(app.relay_states) > 2 else False) else (0.38, 0.38, 0.38, 1)
-                    opacity: 1.0 if app.relay_op_mode_2 != 'schedule' else 0.55
-                    on_release: app.relay_on_off_press(2)
                 Label:
                     text: ("NEXT SCHED: " + app.relay_next_action_2 + " at " + app.relay_next_time_2) if app.relay_next_action_2 != '--' else "NEXT SCHED: --"
                     font_size: Window.height * 0.04

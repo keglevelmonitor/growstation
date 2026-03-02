@@ -585,11 +585,10 @@ class GrowStationApp(App):
         current_state = bool(self.relay_states[relay_idx]) if relay_idx < len(self.relay_states) else False
         setattr(self, f"relay_op_mode_{relay_idx}", mode)
         if mode == "skip":
-            # Start skip with the opposite of the current relay state (override what it's doing)
             setattr(self, f"relay_skip_state_{relay_idx}", not current_state)
         elif mode == "manual":
-            # Start manual with the current relay state so nothing changes immediately
-            setattr(self, f"relay_manual_state_{relay_idx}", current_state)
+            # Toggle on every press — same pattern as SKIP, but no auto-clear
+            setattr(self, f"relay_manual_state_{relay_idx}", not current_state)
         self.log_system_message(f"Relay {relay_idx + 1} → {mode.upper()} mode")
 
     def relay_on_off_press(self, relay_idx):
