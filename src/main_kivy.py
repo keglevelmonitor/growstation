@@ -214,6 +214,7 @@ class GrowStationApp(App):
             self.relay_control = RelayControl(self.settings_manager)
             self.relay_control.set_logger(self.log_system_message)
             self._refresh_ui_from_settings()
+            self._restore_window_position()
             self._cached_temps = self._read_all_temps()
             self._last_temp_read_time = time.time()
             self._tick_interval = Clock.schedule_interval(self._tick, 1.0)
@@ -578,6 +579,44 @@ class GrowStationApp(App):
 
     def _append_update_log(self, text):
         self.update_log_text += text
+
+    def _restore_window_position(self):
+        """Restore last-saved window position and size."""
+        try:
+            from kivy.core.window import Window
+            sys_settings = self.settings_manager.get_system_settings()
+            x = sys_settings.get("window_x", -1)
+            y = sys_settings.get("window_y", -1)
+            w = sys_settings.get("window_width", 800)
+            h = sys_settings.get("window_height", 417)
+            if x != -1 and y != -1:
+                Window.left = int(x)
+                Window.top = int(y)
+            if w > 0 and h > 0:
+                Window.size = (int(w), int(h))
+            self.log_system_message(f"Window: pos({x},{y}) size({w}x{h})")
+        except Exception as e:
+            print(f"[Window] Restore error: {e}")
+
+    def on_stop(self):
+        """Save window position/size and clean up on app close."""
+        try:
+            from kivy.core.window import Window
+            if self.settings_manager:
+                self.settings_manager.save_system_settings({
+                    "window_x": Window.left,
+                    "window_y": Window.top,
+                    "window_width": Window.size[0],
+                    "window_height": Window.size[1],
+                })
+                print(f"[App] Window saved: pos({Window.left},{Window.top}) size({Window.size})")
+        except Exception as e:
+            print(f"[App] Window save error: {e}")
+        try:
+            if self.relay_control:
+                self.relay_control.cleanup_gpio()
+        except Exception:
+            pass
 
     def restart_application(self):
         self.log_system_message("RESTARTING APPLICATION...")
