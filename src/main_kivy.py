@@ -283,8 +283,11 @@ class GrowStationApp(App):
             self._write_temp_snapshot()
 
     def _update_temps(self):
+        # Only update temp readings each tick — NOT sensor display names.
+        # Names are NOT re-read here to avoid overwriting live TextInput edits
+        # in the settings screen before the user can save.
+        # Names are loaded by _refresh_ui_from_settings() on startup and after save/discard.
         for i in range(3):
-            sc = self.settings_manager.get_sensor_config(i)
             t = self._cached_temps.get(i) if self._cached_temps else None
             if t is not None:
                 if self.temp_units == "C":
@@ -292,7 +295,6 @@ class GrowStationApp(App):
                 setattr(self, f"temp_{i+1}", f"{t:.1f}")
             else:
                 setattr(self, f"temp_{i+1}", "--.-")
-            setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
 
     def _update_next_schedule_actions(self):
         """Compute the next scheduled ON or OFF for each relay and update display properties."""
@@ -322,9 +324,12 @@ class GrowStationApp(App):
                 setattr(self, f"relay_next_time_{i}", f"{on_mins // 60:02d}:{on_mins % 60:02d}")
 
     def _update_relay_labels_and_modes(self):
+        # Only update relay_modes (dashboard badge) from settings each tick.
+        # relay_labels are NOT re-read here — doing so would overwrite live TextInput
+        # edits in the settings screen every second before the user can save.
+        # Labels are loaded by _refresh_ui_from_settings() on startup and after save/discard.
         for i in range(3):
             cfg = self.settings_manager.get_relay_config(i)
-            self.relay_labels[i] = cfg.get("label", f"Relay {i+1}")
             m = cfg.get("control_mode", "Timer only")
             if m == "Timer only":
                 self.relay_modes[i] = "Timer"
