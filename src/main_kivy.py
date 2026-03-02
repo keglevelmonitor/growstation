@@ -124,6 +124,17 @@ class GrowStationApp(App):
     sched_off_1 = NumericProperty(0)
     sched_on_2 = NumericProperty(0)
     sched_off_2 = NumericProperty(0)
+    # Relay operational mode: "schedule" | "skip" | "manual"
+    relay_op_mode_0 = StringProperty("schedule")
+    relay_op_mode_1 = StringProperty("schedule")
+    relay_op_mode_2 = StringProperty("schedule")
+    # State used when in SKIP or MANUAL mode
+    relay_skip_state_0 = BooleanProperty(False)
+    relay_skip_state_1 = BooleanProperty(False)
+    relay_skip_state_2 = BooleanProperty(False)
+    relay_manual_state_0 = BooleanProperty(False)
+    relay_manual_state_1 = BooleanProperty(False)
+    relay_manual_state_2 = BooleanProperty(False)
     update_log_text = StringProperty("Click CHECK to check for app updates.\n")
     is_update_available = BooleanProperty(False)
     is_install_successful = BooleanProperty(False)
@@ -133,6 +144,7 @@ class GrowStationApp(App):
     _last_log_time = 0.0
     _last_temp_read_time = 0.0
     _cached_temps = {}
+    _prev_schedule_states = [None, None, None]
     TEMP_READ_INTERVAL = 5.0  # seconds — DS18B20 reads are slow; avoid blocking UI
 
     def dismiss_splash(self, dt=None):
@@ -232,8 +244,26 @@ class GrowStationApp(App):
         if now - self._last_temp_read_time >= self.TEMP_READ_INTERVAL:
             self._cached_temps = self._read_all_temps()
             self._last_temp_read_time = now
-        desired = compute_relay_states(self.settings_manager, temps_cache=self._cached_temps)
-        self.relay_control.set_relay_states(desired)
+        schedule_states = compute_relay_states(self.settings_manager, temps_cache=self._cached_temps)
+        final_states = list(schedule_states)
+        for i in range(3):
+            sched_state = bool(schedule_states[i])
+            mode = getattr(self, f"relay_op_mode_{i}", "schedule")
+            if mode == "schedule":
+                final_states[i] = sched_state
+            elif mode == "skip":
+                skip_st = bool(getattr(self, f"relay_skip_state_{i}", False))
+                prev = self._prev_schedule_states[i]
+                # Auto-clear SKIP when schedule transitions to match the override state
+                if prev is not None and prev != sched_state and sched_state == skip_st:
+                    setattr(self, f"relay_op_mode_{i}", "schedule")
+                    final_states[i] = sched_state
+                else:
+                    final_states[i] = skip_st
+            elif mode == "manual":
+                final_states[i] = bool(getattr(self, f"relay_manual_state_{i}", False))
+            self._prev_schedule_states[i] = sched_state
+        self.relay_control.set_relay_states_direct(final_states)
         for i in range(3):
             self.relay_states[i] = self.relay_control.is_relay_on(i)
         self._update_temps()
@@ -281,6 +311,12 @@ class GrowStationApp(App):
             m = cfg.get("control_mode", "Timer only")
             self.relay_modes[i] = "Timer" if m == "Timer only" else ("Thermo" if m == "Thermostatic only" else "Both")
             setattr(self, f"relay_control_mode_{i}", m)
+            # Restore op_mode (skip never persists — it reverts to schedule on restart)
+            saved_mode = cfg.get("op_mode", "schedule")
+            if saved_mode == "skip":
+                saved_mode = "schedule"
+            setattr(self, f"relay_op_mode_{i}", saved_mode)
+            setattr(self, f"relay_manual_state_{i}", bool(cfg.get("manual_state", False)))
         for i in range(3):
             sc = self.settings_manager.get_sensor_config(i)
             setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
@@ -290,8 +326,14 @@ class GrowStationApp(App):
             windows = sched.get("0", [])
             if windows:
                 w = windows[0]
-                on_slot = self._time_to_slot(w.get("on", ""))
-                off_slot = self._time_to_slot(w.get("off", ""))
+                on_str = w.get("on", "")
+                off_str = w.get("off", "")
+                # "00:00"/"23:59" is the always-on sentinel → both sliders at max (47)
+                if on_str == "00:00" and off_str == "23:59":
+                    on_slot, off_slot = 47, 47
+                else:
+                    on_slot = self._time_to_slot(on_str)
+                    off_slot = self._time_to_slot(off_str)
             else:
                 on_slot, off_slot = 0, 0
             setattr(self, f"sched_on_{i}", on_slot)
@@ -477,7 +519,10 @@ class GrowStationApp(App):
                 continue
             on_slot = changes.get("on", getattr(self, f"sched_on_{i}", 0))
             off_slot = changes.get("off", getattr(self, f"sched_off_{i}", 0))
-            if on_slot == 0 or off_slot == 0:
+            if on_slot == 47 and off_slot == 47:
+                # Both sliders fully right = always on sentinel
+                windows = [{"on": "00:00", "off": "23:59"}]
+            elif on_slot == 0 or off_slot == 0:
                 windows = []
             else:
                 on_m, off_m = on_slot * 30, off_slot * 30
@@ -490,16 +535,31 @@ class GrowStationApp(App):
         self.staged_changes[key] = value
         self.is_settings_dirty = True
 
-    def toggle_relay_manual(self, relay_idx):
-        if not self.relay_control or relay_idx < 0 or relay_idx > 2:
+    def set_relay_op_mode(self, relay_idx, mode):
+        """Switch relay to 'schedule', 'skip', or 'manual' mode."""
+        if relay_idx < 0 or relay_idx > 2:
             return
-        override = self.relay_control.manual_override[relay_idx]
-        if override is True:
-            self.relay_control.set_manual_override(relay_idx, False)
-        elif override is False:
-            self.relay_control.set_manual_override(relay_idx, None)
-        else:
-            self.relay_control.set_manual_override(relay_idx, True)
+        current_state = bool(self.relay_states[relay_idx]) if relay_idx < len(self.relay_states) else False
+        setattr(self, f"relay_op_mode_{relay_idx}", mode)
+        if mode == "skip":
+            # Start skip with the opposite of the current relay state (override what it's doing)
+            setattr(self, f"relay_skip_state_{relay_idx}", not current_state)
+        elif mode == "manual":
+            # Start manual with the current relay state so nothing changes immediately
+            setattr(self, f"relay_manual_state_{relay_idx}", current_state)
+        self.log_system_message(f"Relay {relay_idx + 1} → {mode.upper()} mode")
+
+    def relay_on_off_press(self, relay_idx):
+        """Toggle ON/OFF while in SKIP or MANUAL mode. No-op in SCHEDULE mode."""
+        if relay_idx < 0 or relay_idx > 2:
+            return
+        mode = getattr(self, f"relay_op_mode_{relay_idx}", "schedule")
+        if mode == "skip":
+            current = bool(getattr(self, f"relay_skip_state_{relay_idx}", False))
+            setattr(self, f"relay_skip_state_{relay_idx}", not current)
+        elif mode == "manual":
+            current = bool(getattr(self, f"relay_manual_state_{relay_idx}", False))
+            setattr(self, f"relay_manual_state_{relay_idx}", not current)
 
     def scan_sensors(self):
         found = detect_ds18b20_sensors()
@@ -599,7 +659,7 @@ class GrowStationApp(App):
             print(f"[Window] Restore error: {e}")
 
     def on_stop(self):
-        """Save window position/size and clean up on app close."""
+        """Save window position/size, relay modes, and clean up on app close."""
         try:
             from kivy.core.window import Window
             if self.settings_manager:
@@ -612,6 +672,17 @@ class GrowStationApp(App):
                 print(f"[App] Window saved: pos({Window.left},{Window.top}) size({Window.size})")
         except Exception as e:
             print(f"[App] Window save error: {e}")
+        # Persist relay operational modes and manual states (skip reverts to schedule)
+        try:
+            if self.settings_manager:
+                for i in range(3):
+                    cfg = self.settings_manager.get_relay_config(i)
+                    mode = getattr(self, f"relay_op_mode_{i}", "schedule")
+                    cfg["op_mode"] = "schedule" if mode == "skip" else mode
+                    cfg["manual_state"] = bool(getattr(self, f"relay_manual_state_{i}", False))
+                    self.settings_manager.set_relay_config(i, cfg)
+        except Exception as e:
+            print(f"[App] Relay mode save error: {e}")
         try:
             if self.relay_control:
                 self.relay_control.cleanup_gpio()

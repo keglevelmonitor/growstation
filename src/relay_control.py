@@ -106,6 +106,17 @@ class RelayControl:
             except Exception as e:
                 print(f"[RelayControl] Error setting relay {i}: {e}")
 
+    def set_relay_states_direct(self, desired_states):
+        """Apply states directly without checking manual_override (mode logic handled by App)."""
+        self._update_relay_logic()
+        for i, pin in enumerate(self.pins):
+            state = desired_states[i] if i < len(desired_states) else False
+            try:
+                self.gpio.output(int(pin), self.RELAY_ON if state else self.RELAY_OFF)
+                self.relay_state_cache[i] = state
+            except Exception as e:
+                print(f"[RelayControl] Error setting relay {i}: {e}")
+
     def set_manual_override(self, relay_idx, on_off):
         """
         on_off: True=force ON, False=force OFF, None=auto (follow schedule/thermo)
