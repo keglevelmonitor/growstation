@@ -1,69 +1,77 @@
-# GrowStation
+## 💻 GrowStation Project
+ 
+The **GrowStation Project** allows the user to control lights, heaters, fans, or other small appliances for a home plant growing station. 
 
-Grow station relay and temperature control for Raspberry Pi. Controls 3 relays (lights, fans, heaters) with schedules and up to 3 DS18B20 temperature sensors.
+Currently tested only on the Raspberry Pi 3B running Trixie and Bookworm. Should work with RPi4 and RPi5 running the same OS's but not yet tested.
 
-## Structure
+Please **donate $$** if you use the app. See "Support the app" on the Settings menu. 
 
-```
-GrowStation/
-├── src/
-│   ├── main_kivy.py      # Main app
-│   ├── growstation.kv    # UI layout
-│   ├── settings_manager.py
-│   ├── relay_control.py
-│   ├── control_engine.py
-│   ├── temp_reader.py
-│   └── assets/
-│       ├── help.txt
-│       └── growstation.png   # Optional: add for app icon
-├── install.sh
-├── install.bat
-├── growstation.desktop
-├── requirements.txt
-├── DESIGN.md
-└── README.md
-```
+![Support QR Code](src/assets/support.gif)
 
-## Installation (Raspberry Pi)
+## 💻 I have also deployed a suite of Apps for the Home Brewer
+**🔗 [KettleBrain Project](https://github.com/keglevelmonitor/kettlebrain)** An electric brewing kettle control system
 
-One-liner (recommended):
+**🔗 [FermVault Project](https://github.com/keglevelmonitor/fermvault)** A fermentation chamber control system
+
+**🔗 [KegLevel Lite Project](https://github.com/keglevelmonitor/keglevel_lite)** A keg level monitoring system
+
+**🔗 [BatchFlow Project](https://github.com/keglevelmonitor/batchflow)** A homebrew batch management system
+
+**🔗 [TempMonitor Project](https://github.com/keglevelmonitor/tempmonitor)** A temperature monitoring and charting system
+
+
+## To Install the App
+
+Open **Terminal** and run this command. Type carefully and use proper uppercase / lowercase because it matters:
 
 ```bash
-bash <(curl -sL https://raw.githubusercontent.com/keglevelmonitor/growstation/main/setup.sh)
+bash <(curl -sL bit.ly/install-growstation)
 ```
 
-This clones the repo to `~/growstation/`, installs dependencies, and creates a desktop shortcut. Data is stored in `~/growstation-data/`.
+That's it! You will now find the app in your application menu under **Other**. You can use the "Check for Updates" function inside the app to install future updates.
 
-Or, if you already have the repo cloned:
+## To TEST the App in the Windows Environment
+
+On a Windows 10+ computer, open **Command Prompt** and run this command. Type carefully and use proper uppercase / lowercase because it matters:
 
 ```bash
-cd growstation
-./install.sh
+curl -sL bit.ly/growstation-win -o setup.bat && setup.bat
 ```
 
-## Installation (Windows / Development)
+## 🔗 Detailed installation instructions
+
+👉 (placeholder for detailed installation instructions)
+
+## ⚙️ Summary hardware requirements
+
+Required
+* Raspberry Pi 3B (should work on RPi 4 but not yet tested)
+* Debian Trixie OS (not tested on any other OS)
+
+## To uninstall the app
+
+To uninstall, open **Terminal** and run this command. Type carefully and use proper uppercase / lowercase because it matters:
 
 ```bash
-cd GrowStation
-install.bat
+bash <(curl -sL https://bit.ly/install-growstation)
 ```
+then select the UNINSTALL option from the menu. 
 
-Or manually:
+## ⚙️ For reference
+Installed file structure:
 
-```bash
-python -m venv venv
-venv\Scripts\activate
-pip install -r requirements.txt
-python src/main_kivy.py
 ```
+~/batchflow/
+|-- utility files...
+|-- src/
+|   |-- application files...
+|   |-- assets/
+|       |-- supporting files...
+|-- venv/
+|   |-- python3 & dependencies
+~/batchflow-data/
+|-- user data...
+    
+Required system-level dependencies are installed via sudo apt outside of venv.
 
-## Hardware
-
-- **Relay 1** → GPIO 26 (HEAT pin)
-- **Relay 2** → GPIO 20 (COOL pin)
-- **Relay 3** → GPIO 21 (AUX/Fan pin)
-- DS18B20 sensors on 1-Wire bus
-
-## Icon
-
-The app uses `evolution.png` in `src/assets/` for the taskbar and desktop shortcut icon.
+```
