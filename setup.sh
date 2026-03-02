@@ -106,7 +106,7 @@ fi
 if [ -d "$INSTALL_DIR" ]; then
     echo "Updating existing install..."
     cd "$INSTALL_DIR" || exit 1
-    git pull
+    git pull --rebase
 else
     echo "Cloning repository to $INSTALL_DIR..."
     git clone https://github.com/keglevelmonitor/growstation.git "$INSTALL_DIR"
