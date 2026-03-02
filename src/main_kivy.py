@@ -19,8 +19,10 @@ if os.path.exists(icon_path):
     Config.set("kivy", "window_icon", icon_path)
 
 Config.set("graphics", "width", "800")
-Config.set("graphics", "height", "417")
-Config.set("graphics", "resizable", "0")
+Config.set("graphics", "height", "418")
+Config.set("graphics", "resizable", "1")
+Config.set("graphics", "minimum_width", "800")
+Config.set("graphics", "minimum_height", "418")
 
 from kivy.app import App
 from kivy.lang import Builder
@@ -223,6 +225,9 @@ class GrowStationApp(App):
             from kivy.uix.label import Label
             root = Label(text="growstation.kv not found", font_size="24sp")
         self.sm = root if hasattr(root, "current") else None
+        from kivy.core.window import Window
+        Window.minimum_width = 800
+        Window.minimum_height = 418
         Clock.schedule_once(self._start_backend, 0.2)
         return root
 
@@ -709,20 +714,21 @@ class GrowStationApp(App):
         self.update_log_text += text
 
     def _restore_window_position(self):
-        """Restore last-saved window position and size."""
+        """Restore last-saved window position and size, clamped to minimum 800x418."""
         try:
             from kivy.core.window import Window
             sys_settings = self.settings_manager.get_system_settings()
             x = sys_settings.get("window_x", -1)
             y = sys_settings.get("window_y", -1)
             w = sys_settings.get("window_width", 800)
-            h = sys_settings.get("window_height", 417)
+            h = sys_settings.get("window_height", 418)
             if x != -1 and y != -1:
                 Window.left = int(x)
                 Window.top = int(y)
-            if w > 0 and h > 0:
-                Window.size = (int(w), int(h))
-            self.log_system_message(f"Window: pos({x},{y}) size({w}x{h})")
+            safe_w = max(int(w), 800) if w > 0 else 800
+            safe_h = max(int(h), 418) if h > 0 else 418
+            Window.size = (safe_w, safe_h)
+            self.log_system_message(f"Window: pos({x},{y}) size({safe_w}x{safe_h})")
         except Exception as e:
             print(f"[Window] Restore error: {e}")
 
@@ -731,13 +737,15 @@ class GrowStationApp(App):
         try:
             from kivy.core.window import Window
             if self.settings_manager:
+                safe_w = max(Window.size[0], 800)
+                safe_h = max(Window.size[1], 418)
                 self.settings_manager.save_system_settings({
                     "window_x": Window.left,
                     "window_y": Window.top,
-                    "window_width": Window.size[0],
-                    "window_height": Window.size[1],
+                    "window_width": safe_w,
+                    "window_height": safe_h,
                 })
-                print(f"[App] Window saved: pos({Window.left},{Window.top}) size({Window.size})")
+                print(f"[App] Window saved: pos({Window.left},{Window.top}) size({safe_w}x{safe_h})")
         except Exception as e:
             print(f"[App] Window save error: {e}")
         # Persist relay operational modes and manual states (skip reverts to schedule)

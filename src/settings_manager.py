@@ -65,7 +65,7 @@ class SettingsManager:
                 "window_x": -1,
                 "window_y": -1,
                 "window_width": 800,
-                "window_height": 417,
+                "window_height": 418,
             },
         }
 
