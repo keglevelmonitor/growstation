@@ -128,6 +128,14 @@ class GrowStationApp(App):
     relay_op_mode_0 = StringProperty("schedule")
     relay_op_mode_1 = StringProperty("schedule")
     relay_op_mode_2 = StringProperty("schedule")
+    # Next scheduled action per relay: "--" | "ON" | "OFF"
+    relay_next_action_0 = StringProperty("--")
+    relay_next_action_1 = StringProperty("--")
+    relay_next_action_2 = StringProperty("--")
+    # Time of next scheduled action: "--:--" | "HH:MM"
+    relay_next_time_0 = StringProperty("--:--")
+    relay_next_time_1 = StringProperty("--:--")
+    relay_next_time_2 = StringProperty("--:--")
     # State used when in SKIP or MANUAL mode
     relay_skip_state_0 = BooleanProperty(False)
     relay_skip_state_1 = BooleanProperty(False)
@@ -268,6 +276,7 @@ class GrowStationApp(App):
             self.relay_states[i] = self.relay_control.is_relay_on(i)
         self._update_temps()
         self._update_relay_labels_and_modes()
+        self._update_next_schedule_actions()
         interval_min = float(self.logging_interval_min or 10)
         if self.system_logging_enabled and interval_min > 0 and (now - self._last_log_time) >= interval_min * 60:
             self._last_log_time = now
@@ -284,6 +293,33 @@ class GrowStationApp(App):
             else:
                 setattr(self, f"temp_{i+1}", "--.-")
             setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
+
+    def _update_next_schedule_actions(self):
+        """Compute the next scheduled ON or OFF for each relay and update display properties."""
+        now = datetime.now()
+        now_mins = now.hour * 60 + now.minute
+        for i in range(3):
+            on_slot = int(getattr(self, f"sched_on_{i}", 0))
+            off_slot = int(getattr(self, f"sched_off_{i}", 0))
+            # No schedule set, or always-on sentinel (both sliders at max)
+            if on_slot == 0 or off_slot == 0 or (on_slot == 47 and off_slot == 47):
+                setattr(self, f"relay_next_action_{i}", "--")
+                setattr(self, f"relay_next_time_{i}", "--:--")
+                continue
+            on_mins = on_slot * 30
+            off_mins = off_slot * 30
+            if now_mins < on_mins:
+                # Before the ON time today — next action is ON
+                setattr(self, f"relay_next_action_{i}", "ON")
+                setattr(self, f"relay_next_time_{i}", f"{on_mins // 60:02d}:{on_mins % 60:02d}")
+            elif now_mins < off_mins:
+                # Inside the ON window — next action is OFF
+                setattr(self, f"relay_next_action_{i}", "OFF")
+                setattr(self, f"relay_next_time_{i}", f"{off_mins // 60:02d}:{off_mins % 60:02d}")
+            else:
+                # Past the OFF time — next action is ON (tomorrow, show time only)
+                setattr(self, f"relay_next_action_{i}", "ON")
+                setattr(self, f"relay_next_time_{i}", f"{on_mins // 60:02d}:{on_mins % 60:02d}")
 
     def _update_relay_labels_and_modes(self):
         for i in range(3):
