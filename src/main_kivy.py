@@ -23,7 +23,7 @@ Config.set("graphics", "resizable", "0")
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.screenmanager import ScreenManager, Screen
-from kivy.properties import StringProperty, ListProperty, BooleanProperty, ObjectProperty
+from kivy.properties import StringProperty, ListProperty, BooleanProperty, ObjectProperty, NumericProperty
 from kivy.uix.popup import Popup
 from kivy.clock import Clock, mainthread
 
@@ -118,6 +118,12 @@ class GrowStationApp(App):
     sensor_id_3 = StringProperty("unassigned")
     relay_active_high = BooleanProperty(False)
     logging_interval_min = StringProperty("10")
+    sched_on_0 = NumericProperty(0)
+    sched_off_0 = NumericProperty(0)
+    sched_on_1 = NumericProperty(0)
+    sched_off_1 = NumericProperty(0)
+    sched_on_2 = NumericProperty(0)
+    sched_off_2 = NumericProperty(0)
     update_log_text = StringProperty("Click CHECK to check for app updates.\n")
     is_update_available = BooleanProperty(False)
     is_install_successful = BooleanProperty(False)
@@ -278,7 +284,45 @@ class GrowStationApp(App):
             sc = self.settings_manager.get_sensor_config(i)
             setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
             setattr(self, f"sensor_id_{i+1}", sc.get("ds18b20_id", "unassigned"))
+        for i in range(3):
+            sched = self.settings_manager.get_schedule(i)
+            windows = sched.get("0", [])
+            if windows:
+                w = windows[0]
+                on_slot = self._time_to_slot(w.get("on", ""))
+                off_slot = self._time_to_slot(w.get("off", ""))
+            else:
+                on_slot, off_slot = 0, 0
+            setattr(self, f"sched_on_{i}", on_slot)
+            setattr(self, f"sched_off_{i}", off_slot)
         self._update_temps()
+
+    @staticmethod
+    def _time_to_slot(time_str):
+        """Convert HH:MM string to 30-min slot index (0-47). 0 = disabled."""
+        if not time_str or ":" not in time_str:
+            return 0
+        try:
+            h, m = map(int, time_str.split(":"))
+            return max(0, min(47, (h * 60 + m) // 30))
+        except (ValueError, TypeError):
+            return 0
+
+    def slot_to_time(self, slot):
+        """Convert 30-min slot index (0-47) to display string. 0 = OFF."""
+        slot = int(slot)
+        if slot == 0:
+            return "-- OFF --"
+        mins = slot * 30
+        return f"{mins // 60:02d}:{mins % 60:02d}"
+
+    def set_sched_on(self, relay_idx, slot):
+        setattr(self, f"sched_on_{relay_idx}", slot)
+        self.stage_setting(f"schedule_on_{relay_idx}", slot)
+
+    def set_sched_off(self, relay_idx, slot):
+        setattr(self, f"sched_off_{relay_idx}", slot)
+        self.stage_setting(f"schedule_off_{relay_idx}", slot)
 
     def go_to_screen(self, name, direction="left"):
         if self.sm:
@@ -420,6 +464,25 @@ class GrowStationApp(App):
                 elif key == "system_logging_enabled":
                     v = bool(val)
                 self.settings_manager.save_system_settings({key: v})
+        # Save schedule changes: collect on/off slots per relay and write to all 7 days
+        sched_dirty = {i: {} for i in range(3)}
+        for key, val in self.staged_changes.items():
+            if key.startswith("schedule_on_"):
+                sched_dirty[int(key[-1])]["on"] = int(val)
+            elif key.startswith("schedule_off_"):
+                sched_dirty[int(key[-1])]["off"] = int(val)
+        for i, changes in sched_dirty.items():
+            if not changes:
+                continue
+            on_slot = changes.get("on", getattr(self, f"sched_on_{i}", 0))
+            off_slot = changes.get("off", getattr(self, f"sched_off_{i}", 0))
+            if on_slot == 0 or off_slot == 0:
+                windows = []
+            else:
+                on_m, off_m = on_slot * 30, off_slot * 30
+                windows = [{"on": f"{on_m // 60:02d}:{on_m % 60:02d}",
+                            "off": f"{off_m // 60:02d}:{off_m % 60:02d}"}]
+            self.settings_manager.set_schedule(i, {str(d): list(windows) for d in range(7)})
         self.log_system_message("Settings saved.")
 
     def stage_setting(self, key, value):

@@ -396,19 +396,171 @@
                     Rectangle:
                         pos: self.pos
                         size: self.size
-                ScrollView:
-                    do_scroll_x: False
+                BoxLayout:
+                    orientation: 'vertical'
+                    padding: [8, 8]
+                    spacing: 4
+
+                    # Header row
                     BoxLayout:
-                        orientation: 'vertical'
                         size_hint_y: None
-                        height: self.minimum_height
-                        padding: [5, 10]
+                        height: Window.height * 0.09
                         Label:
-                            text: "Schedule editor (per relay, per day)\nComing in next update."
+                            text: ""
+                            size_hint_x: None
+                            width: 70
+                        Text_Medium:
+                            text: app.relay_labels[0]
                             halign: 'center'
-                            font_size: '18sp'
-                            size_hint_y: None
-                            height: 80
+                            valign: 'middle'
+                            text_size: self.size
+                        Text_Medium:
+                            text: app.relay_labels[1]
+                            halign: 'center'
+                            valign: 'middle'
+                            text_size: self.size
+                        Text_Medium:
+                            text: app.relay_labels[2]
+                            halign: 'center'
+                            valign: 'middle'
+                            text_size: self.size
+
+                    # ON row
+                    BoxLayout:
+                        size_hint_y: None
+                        height: Window.height * 0.22
+                        SettingLabel:
+                            text: "ON"
+                            size_hint_x: None
+                            width: 70
+                            font_size: Window.height * 0.04
+                        BoxLayout:
+                            orientation: 'vertical'
+                            padding: [5, 0]
+                            Slider:
+                                min: 0
+                                max: 47
+                                step: 1
+                                value: app.sched_on_0
+                                value_track: True
+                                value_track_color: 0.2, 0.8, 1, 1
+                                on_value: app.set_sched_on(0, int(self.value))
+                            Label:
+                                text: app.slot_to_time(app.sched_on_0)
+                                font_size: Window.height * 0.038
+                                bold: True
+                                color: (1, 0.75, 0, 1) if app.sched_on_0 > 0 else (0.5, 0.5, 0.5, 1)
+                                halign: 'center'
+                                text_size: self.size
+                                valign: 'middle'
+                        BoxLayout:
+                            orientation: 'vertical'
+                            padding: [5, 0]
+                            Slider:
+                                min: 0
+                                max: 47
+                                step: 1
+                                value: app.sched_on_1
+                                value_track: True
+                                value_track_color: 0.2, 0.8, 1, 1
+                                on_value: app.set_sched_on(1, int(self.value))
+                            Label:
+                                text: app.slot_to_time(app.sched_on_1)
+                                font_size: Window.height * 0.038
+                                bold: True
+                                color: (1, 0.75, 0, 1) if app.sched_on_1 > 0 else (0.5, 0.5, 0.5, 1)
+                                halign: 'center'
+                                text_size: self.size
+                                valign: 'middle'
+                        BoxLayout:
+                            orientation: 'vertical'
+                            padding: [5, 0]
+                            Slider:
+                                min: 0
+                                max: 47
+                                step: 1
+                                value: app.sched_on_2
+                                value_track: True
+                                value_track_color: 0.2, 0.8, 1, 1
+                                on_value: app.set_sched_on(2, int(self.value))
+                            Label:
+                                text: app.slot_to_time(app.sched_on_2)
+                                font_size: Window.height * 0.038
+                                bold: True
+                                color: (1, 0.75, 0, 1) if app.sched_on_2 > 0 else (0.5, 0.5, 0.5, 1)
+                                halign: 'center'
+                                text_size: self.size
+                                valign: 'middle'
+
+                    # OFF row
+                    BoxLayout:
+                        size_hint_y: None
+                        height: Window.height * 0.22
+                        SettingLabel:
+                            text: "OFF"
+                            size_hint_x: None
+                            width: 70
+                            font_size: Window.height * 0.04
+                        BoxLayout:
+                            orientation: 'vertical'
+                            padding: [5, 0]
+                            Slider:
+                                min: 0
+                                max: 47
+                                step: 1
+                                value: app.sched_off_0
+                                value_track: True
+                                value_track_color: 0.8, 0.3, 0.3, 1
+                                on_value: app.set_sched_off(0, int(self.value))
+                            Label:
+                                text: app.slot_to_time(app.sched_off_0)
+                                font_size: Window.height * 0.038
+                                bold: True
+                                color: (1, 0.75, 0, 1) if app.sched_off_0 > 0 else (0.5, 0.5, 0.5, 1)
+                                halign: 'center'
+                                text_size: self.size
+                                valign: 'middle'
+                        BoxLayout:
+                            orientation: 'vertical'
+                            padding: [5, 0]
+                            Slider:
+                                min: 0
+                                max: 47
+                                step: 1
+                                value: app.sched_off_1
+                                value_track: True
+                                value_track_color: 0.8, 0.3, 0.3, 1
+                                on_value: app.set_sched_off(1, int(self.value))
+                            Label:
+                                text: app.slot_to_time(app.sched_off_1)
+                                font_size: Window.height * 0.038
+                                bold: True
+                                color: (1, 0.75, 0, 1) if app.sched_off_1 > 0 else (0.5, 0.5, 0.5, 1)
+                                halign: 'center'
+                                text_size: self.size
+                                valign: 'middle'
+                        BoxLayout:
+                            orientation: 'vertical'
+                            padding: [5, 0]
+                            Slider:
+                                min: 0
+                                max: 47
+                                step: 1
+                                value: app.sched_off_2
+                                value_track: True
+                                value_track_color: 0.8, 0.3, 0.3, 1
+                                on_value: app.set_sched_off(2, int(self.value))
+                            Label:
+                                text: app.slot_to_time(app.sched_off_2)
+                                font_size: Window.height * 0.038
+                                bold: True
+                                color: (1, 0.75, 0, 1) if app.sched_off_2 > 0 else (0.5, 0.5, 0.5, 1)
+                                halign: 'center'
+                                text_size: self.size
+                                valign: 'middle'
+
+                    Widget:
+                        size_hint_y: 1
             Screen:
                 name: 'tab_relays'
                 canvas.before:
