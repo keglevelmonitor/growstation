@@ -511,6 +511,9 @@ class GrowStationApp(App):
         self.staged_changes.clear()
         self.is_settings_dirty = False
         self._refresh_ui_from_settings()
+        # Suppress any feedback-loop re-staging from KV on_value/on_text callbacks
+        self.staged_changes.clear()
+        self.is_settings_dirty = False
         self.go_to_screen("dashboard")
 
     def save_and_continue(self):
@@ -524,6 +527,9 @@ class GrowStationApp(App):
         self.staged_changes.clear()
         self.is_settings_dirty = False
         self._refresh_ui_from_settings()
+        # Suppress any feedback-loop re-staging from KV on_value/on_text callbacks
+        self.staged_changes.clear()
+        self.is_settings_dirty = False
 
     def _save_staged_changes(self):
         if not self.settings_manager:
