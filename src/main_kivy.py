@@ -408,12 +408,22 @@ class GrowStationApp(App):
         return f"{mins // 60:02d}:{mins % 60:02d}"
 
     def set_sched_on(self, relay_idx, slot):
-        setattr(self, f"sched_on_{relay_idx}", slot)
-        self.stage_setting(f"schedule_on_{relay_idx}", slot)
+        current = int(getattr(self, f"sched_on_{relay_idx}", 0))
+        new_slot = int(slot)
+        # Ignore no-op callbacks from initial widget binding/refresh.
+        if current == new_slot:
+            return
+        setattr(self, f"sched_on_{relay_idx}", new_slot)
+        self.stage_setting(f"schedule_on_{relay_idx}", new_slot)
 
     def set_sched_off(self, relay_idx, slot):
-        setattr(self, f"sched_off_{relay_idx}", slot)
-        self.stage_setting(f"schedule_off_{relay_idx}", slot)
+        current = int(getattr(self, f"sched_off_{relay_idx}", 0))
+        new_slot = int(slot)
+        # Ignore no-op callbacks from initial widget binding/refresh.
+        if current == new_slot:
+            return
+        setattr(self, f"sched_off_{relay_idx}", new_slot)
+        self.stage_setting(f"schedule_off_{relay_idx}", new_slot)
 
     def go_to_screen(self, name, direction="left"):
         if self.sm:
