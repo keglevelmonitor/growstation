@@ -32,11 +32,12 @@ else
 fi
 
 echo "Pulling changes..."
-if ! git pull --rebase origin "$BRANCH"; then
+if ! git pull --rebase --autostash origin "$BRANCH"; then
     echo "Resetting install.sh and update.sh (chmod changes) and retrying..."
     git checkout -- install.sh update.sh 2>/dev/null
-    if ! git pull --rebase origin "$BRANCH"; then
+    if ! git pull --rebase --autostash origin "$BRANCH"; then
         echo "[ERROR] git pull failed."
+        echo "        Tip: run 'git status' in $PROJECT_DIR to inspect local changes."
         exit 1
     fi
 fi

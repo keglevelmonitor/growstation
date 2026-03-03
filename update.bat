@@ -51,10 +51,11 @@ echo --- Starting Install Process ---
 
 :: 1. Git Pull
 echo [1/2] Pulling latest code...
-git pull --rebase origin %BRANCH%
+git pull --rebase --autostash origin %BRANCH%
 
 IF %ERRORLEVEL% NEQ 0 (
     echo [ERROR] Git pull failed.
+    echo        Tip: run 'git status' in %PROJECT_DIR% to inspect local changes.
     exit /b 1
 )
 
