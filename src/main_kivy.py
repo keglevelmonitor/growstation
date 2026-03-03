@@ -648,8 +648,15 @@ class GrowStationApp(App):
             try:
                 src_dir = os.path.dirname(os.path.abspath(__file__))
                 project_root = os.path.dirname(src_dir)
-                subprocess.check_output(["git", "fetch"], cwd=project_root, stderr=subprocess.STDOUT)
-                status = subprocess.check_output(["git", "status", "-uno"], cwd=project_root, text=True)
+                popen_kwargs = {
+                    "cwd": project_root,
+                    "stderr": subprocess.STDOUT
+                }
+                if sys.platform == "win32":
+                    popen_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+                subprocess.check_output(["git", "fetch"], **popen_kwargs)
+                status = subprocess.check_output(["git", "status", "-uno"], text=True, **popen_kwargs)
 
                 def update_ui(dt):
                     if "behind" in status:
