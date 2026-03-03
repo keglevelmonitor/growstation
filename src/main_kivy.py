@@ -159,6 +159,7 @@ class GrowStationApp(App):
     _cached_temps = {}
     _prev_schedule_states = [None, None, None]
     TEMP_READ_INTERVAL = 5.0  # seconds — DS18B20 reads are slow; avoid blocking UI
+    _suppress_stage_setting = False
 
     def dismiss_splash(self, dt=None):
         if hasattr(self, "splash_queue") and self.splash_queue:
@@ -351,42 +352,47 @@ class GrowStationApp(App):
     def _refresh_ui_from_settings(self):
         if not self.settings_manager:
             return
-        sys_settings = self.settings_manager.get_system_settings()
-        self.temp_units = sys_settings.get("temp_units", "F")
-        self.relay_active_high = sys_settings.get("relay_active_high", False)
-        self.system_logging_enabled = sys_settings.get("system_logging_enabled", True)
-        self.logging_interval_min = str(sys_settings.get("logging_interval_min", 10))
-        for i in range(3):
-            cfg = self.settings_manager.get_relay_config(i)
-            self.relay_labels[i] = cfg.get("label", f"Relay {i+1}")
-            m = cfg.get("control_mode", "Timer only")
-            self.relay_modes[i] = "Timer" if m == "Timer only" else ("Thermo" if m == "Thermostatic only" else "Both")
-            setattr(self, f"relay_control_mode_{i}", m)
-            # Always start in SCHEDULE mode on boot regardless of last-saved mode
-            setattr(self, f"relay_op_mode_{i}", "schedule")
-            setattr(self, f"relay_manual_state_{i}", bool(cfg.get("manual_state", False)))
-        for i in range(3):
-            sc = self.settings_manager.get_sensor_config(i)
-            setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
-            setattr(self, f"sensor_id_{i+1}", sc.get("ds18b20_id", "unassigned"))
-        for i in range(3):
-            sched = self.settings_manager.get_schedule(i)
-            windows = sched.get("0", [])
-            if windows:
-                w = windows[0]
-                on_str = w.get("on", "")
-                off_str = w.get("off", "")
-                # "00:00"/"23:59" is the always-on sentinel → both sliders at max (47)
-                if on_str == "00:00" and off_str == "23:59":
-                    on_slot, off_slot = 47, 47
+        prev_suppress = self._suppress_stage_setting
+        self._suppress_stage_setting = True
+        try:
+            sys_settings = self.settings_manager.get_system_settings()
+            self.temp_units = sys_settings.get("temp_units", "F")
+            self.relay_active_high = sys_settings.get("relay_active_high", False)
+            self.system_logging_enabled = sys_settings.get("system_logging_enabled", True)
+            self.logging_interval_min = str(sys_settings.get("logging_interval_min", 10))
+            for i in range(3):
+                cfg = self.settings_manager.get_relay_config(i)
+                self.relay_labels[i] = cfg.get("label", f"Relay {i+1}")
+                m = cfg.get("control_mode", "Timer only")
+                self.relay_modes[i] = "Timer" if m == "Timer only" else ("Thermo" if m == "Thermostatic only" else "Both")
+                setattr(self, f"relay_control_mode_{i}", m)
+                # Always start in SCHEDULE mode on boot regardless of last-saved mode
+                setattr(self, f"relay_op_mode_{i}", "schedule")
+                setattr(self, f"relay_manual_state_{i}", bool(cfg.get("manual_state", False)))
+            for i in range(3):
+                sc = self.settings_manager.get_sensor_config(i)
+                setattr(self, f"temp_name_{i+1}", sc.get("display_name", f"Sensor {i+1}"))
+                setattr(self, f"sensor_id_{i+1}", sc.get("ds18b20_id", "unassigned"))
+            for i in range(3):
+                sched = self.settings_manager.get_schedule(i)
+                windows = sched.get("0", [])
+                if windows:
+                    w = windows[0]
+                    on_str = w.get("on", "")
+                    off_str = w.get("off", "")
+                    # "00:00"/"23:59" is the always-on sentinel → both sliders at max (47)
+                    if on_str == "00:00" and off_str == "23:59":
+                        on_slot, off_slot = 47, 47
+                    else:
+                        on_slot = self._time_to_slot(on_str)
+                        off_slot = self._time_to_slot(off_str)
                 else:
-                    on_slot = self._time_to_slot(on_str)
-                    off_slot = self._time_to_slot(off_str)
-            else:
-                on_slot, off_slot = 0, 0
-            setattr(self, f"sched_on_{i}", on_slot)
-            setattr(self, f"sched_off_{i}", off_slot)
-        self._update_temps()
+                    on_slot, off_slot = 0, 0
+                setattr(self, f"sched_on_{i}", on_slot)
+                setattr(self, f"sched_off_{i}", off_slot)
+            self._update_temps()
+        finally:
+            self._suppress_stage_setting = prev_suppress
 
     @staticmethod
     def _time_to_slot(time_str):
@@ -603,6 +609,8 @@ class GrowStationApp(App):
         self.log_system_message("Settings saved.")
 
     def stage_setting(self, key, value):
+        if self._suppress_stage_setting:
+            return
         self.staged_changes[key] = value
         self.is_settings_dirty = True
 
@@ -638,7 +646,12 @@ class GrowStationApp(App):
 
     def scan_sensors(self):
         found = detect_ds18b20_sensors()
-        self.available_sensors = ["unassigned"] + found
+        prev_suppress = self._suppress_stage_setting
+        self._suppress_stage_setting = True
+        try:
+            self.available_sensors = ["unassigned"] + found
+        finally:
+            self._suppress_stage_setting = prev_suppress
         self.log_system_message(f"Sensor scan: found {len(found)} DS18B20.")
         return found
 
